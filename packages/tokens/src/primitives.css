@@ -1,0 +1,71 @@
+/**
+ * 原始色板（primitive）
+ * 只放“值”，不放语义。组件层永远不直接引用这里的变量。
+ * 主色 #00A0E9，其余色相按同一明度曲线推导，保证并排使用时视觉重量一致。
+ */
+:root {
+  /* 品牌蓝 · 主色 #00A0E9 */
+  --jm-blue-50: #e7f6fd;
+  --jm-blue-100: #c4ebfb;
+  --jm-blue-200: #8ed9f7;
+  --jm-blue-300: #55c5f2;
+  --jm-blue-400: #1fb2ed;
+  --jm-blue-500: #00a0e9;
+  --jm-blue-600: #0087c6;
+  --jm-blue-700: #006ea3;
+  --jm-blue-800: #005680;
+  --jm-blue-900: #003d5c;
+
+  /* 成功 · 薄荷绿（与青色主色同族，冷调里偏绿，不打架） */
+  --jm-green-50: #e5faf4;
+  --jm-green-100: #b5f0df;
+  --jm-green-200: #7be2c6;
+  --jm-green-300: #3dd2ad;
+  --jm-green-400: #0acb9c;
+  --jm-green-500: #00b98a;
+  --jm-green-600: #009e75;
+  --jm-green-700: #00825f;
+  --jm-green-800: #00664a;
+  --jm-green-900: #004a35;
+
+  /* 警告 · 琥珀 */
+  --jm-amber-50: #fff6e8;
+  --jm-amber-100: #ffe6bf;
+  --jm-amber-200: #ffd08c;
+  --jm-amber-300: #ffb954;
+  --jm-amber-400: #ffa72e;
+  --jm-amber-500: #ff9f1c;
+  --jm-amber-600: #e28200;
+  --jm-amber-700: #b96700;
+  --jm-amber-800: #8f4e00;
+  --jm-amber-900: #663700;
+
+  /* 危险 · 珊瑚红 */
+  --jm-red-50: #feecee;
+  --jm-red-100: #fcc9cf;
+  --jm-red-200: #f99aa5;
+  --jm-red-300: #f66c7c;
+  --jm-red-400: #f34a5f;
+  --jm-red-500: #e8344b;
+  --jm-red-600: #c92539;
+  --jm-red-700: #a61a2c;
+  --jm-red-800: #831220;
+  --jm-red-900: #600b16;
+
+  /* 中性 · 冷灰（带一点蓝调，跟主色同温） */
+  --jm-gray-0: #ffffff;
+  --jm-gray-50: #f7f9fa;
+  --jm-gray-100: #f1f4f6;
+  --jm-gray-200: #e5eaee;
+  --jm-gray-300: #d5dce2;
+  --jm-gray-400: #b9c3cc;
+  --jm-gray-500: #8f9ca7;
+  --jm-gray-600: #66737f;
+  --jm-gray-700: #4a555f;
+  --jm-gray-800: #2e363e;
+  --jm-gray-900: #1b2128;
+  --jm-gray-950: #10151a;
+
+  --jm-white: #ffffff;
+  --jm-black: #000000;
+}

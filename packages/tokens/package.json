@@ -1,0 +1,22 @@
+{
+  "name": "@jimu/tokens",
+  "version": "0.3.0",
+  "description": "Jimu UI 设计令牌：颜色、字号、间距、圆角、动效",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./index.css": "./src/index.css",
+    "./primitives.css": "./src/primitives.css",
+    "./tokens.css": "./src/tokens.css",
+    "./dark.css": "./src/dark.css",
+    "./elder.css": "./src/elder.css",
+    "./motion.css": "./src/motion.css"
+  },
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

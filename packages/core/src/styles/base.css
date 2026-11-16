@@ -1,0 +1,84 @@
+/**
+ * 基础层
+ * 1. 统一盒模型，不写全局 reset，避免污染接入方的页面
+ * 2. 类型色映射：所有组件共用一套 --jm-local-* 局部变量，
+ *    组件只需要挂上 jm--primary 这类 class，颜色就统一了
+ */
+
+[class^='jm-'],
+[class*=' jm-'] {
+  box-sizing: border-box;
+}
+
+.jm--default {
+  --jm-local-color: var(--jm-text-color);
+  --jm-local-light: var(--jm-bg-input);
+  --jm-local-border: var(--jm-border-color-2);
+  --jm-local-contrast: var(--jm-bg-container);
+}
+
+.jm--primary {
+  --jm-local-color: var(--jm-color-primary);
+  --jm-local-light: var(--jm-color-primary-light);
+  --jm-local-border: var(--jm-color-primary-border);
+  --jm-local-contrast: var(--jm-color-primary-contrast);
+}
+
+.jm--success {
+  --jm-local-color: var(--jm-color-success);
+  --jm-local-light: var(--jm-color-success-light);
+  --jm-local-border: var(--jm-color-success-border);
+  --jm-local-contrast: var(--jm-color-success-contrast);
+}
+
+.jm--warning {
+  --jm-local-color: var(--jm-color-warning);
+  --jm-local-light: var(--jm-color-warning-light);
+  --jm-local-border: var(--jm-color-warning-border);
+  --jm-local-contrast: var(--jm-color-warning-contrast);
+}
+
+.jm--danger {
+  --jm-local-color: var(--jm-color-danger);
+  --jm-local-light: var(--jm-color-danger-light);
+  --jm-local-border: var(--jm-color-danger-border);
+  --jm-local-contrast: var(--jm-color-danger-contrast);
+}
+
+.jm--info {
+  --jm-local-color: var(--jm-color-info);
+  --jm-local-light: var(--jm-color-info-light);
+  --jm-local-border: var(--jm-color-info-border);
+  --jm-local-contrast: var(--jm-color-info-contrast);
+}
+
+/* 细线：高分屏 1px 太粗时用它 */
+.jm-hairline {
+  position: relative;
+}
+
+.jm-hairline::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--jm-border-color);
+  border-radius: inherit;
+  pointer-events: none;
+  transform: scale(0.5);
+  transform-origin: 0 0;
+  width: 200%;
+  height: 200%;
+}
+
+.jm-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jm-ellipsis-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}

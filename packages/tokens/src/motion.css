@@ -1,0 +1,189 @@
+/**
+ * 动效系统
+ * ---------------------------------------------------------------------------
+ * 参考 Arco Design 的时长阶梯（100/200/300/400/500ms）与四条缓动曲线，
+ * 按移动端的触控节奏重新组织成「三层」：
+ *
+ *   1. 原始层 --jm-duration-*  / --jm-ease-*     只描述数值，不带语义
+ *   2. 语义层 --jm-motion-{feedback|transition|enter|exit|spring}-*  组件只读这一层
+ *   3. 预设层 --jm-motion-color / -press / -fade ...  一行写完一组 transition
+ *
+ * 为什么要有语义层：同一个 200ms，用在「按下反馈」上偏慢、用在「弹层进场」上偏快。
+ * 按时长选值是拍脑袋，按「这段动效在表达什么」选值才稳定。四条曲线各有分工：
+ *   standard   状态之间的平移/变色（最常用，默认选它）
+ *   decelerate 进场：快起步、慢落位，元素"停下来"
+ *   accelerate 退场：慢起步、快离开，比进场短，走得不拖沓
+ *   overshoot  弹性：开关滑块、勾选、点赞等有物理惯性的动作
+ *
+ * 铁律：组件内禁止写死 transition: .3s，一律读语义层或预设。
+ * 这样 [data-motion='off'] 才能在零改动的情况下全库关停。
+ */
+
+:root {
+  /* ---------- 1. 原始层：时长阶梯 ---------- */
+  --jm-duration-1: 100ms;
+  --jm-duration-2: 200ms;
+  --jm-duration-3: 300ms;
+  --jm-duration-4: 400ms;
+  --jm-duration-5: 500ms;
+
+  /* ---------- 1. 原始层：缓动曲线 ---------- */
+  --jm-ease-standard: cubic-bezier(0.34, 0.69, 0.1, 1);
+  --jm-ease-decelerate: cubic-bezier(0.4, 0.8, 0.74, 1);
+  --jm-ease-accelerate: cubic-bezier(0.26, 0, 0.48, 0.9);
+  --jm-ease-overshoot: cubic-bezier(0.3, 1.3, 0.3, 1);
+  --jm-ease-linear: linear;
+
+  /* ---------- 2. 语义层：反馈 ---------- */
+  /* 按下、勾选、悬停：手指必须"立刻有回应"，超过 120ms 就会有黏滞感 */
+  --jm-motion-feedback-duration: var(--jm-duration-1);
+  --jm-motion-feedback-ease: var(--jm-ease-standard);
+
+  /* ---------- 2. 语义层：过渡 ---------- */
+  /* 同一层内的状态变化：颜色、透明度、位移、描边 */
+  --jm-motion-transition-duration: var(--jm-duration-2);
+  --jm-motion-transition-ease: var(--jm-ease-standard);
+
+  /* ---------- 2. 语义层：进场 ---------- */
+  /* 弹层、对话框、提示：减速曲线，元素"落位" */
+  --jm-motion-enter-duration: var(--jm-duration-3);
+  --jm-motion-enter-ease: var(--jm-ease-decelerate);
+
+  /* ---------- 2. 语义层：退场 ---------- */
+  /* 比进场短一档，避免"关得比开得慢"的拖沓感 */
+  --jm-motion-exit-duration: var(--jm-duration-2);
+  --jm-motion-exit-ease: var(--jm-ease-accelerate);
+
+  /* ---------- 2. 语义层：弹性 ---------- */
+  /* 滑块、勾选标记、点赞：带一点过冲，手感更"实体" */
+  --jm-motion-spring-duration: var(--jm-duration-3);
+  --jm-motion-spring-ease: var(--jm-ease-overshoot);
+
+  /* ---------- 2. 语义层：循环 ---------- */
+  /* 加载、骨架、跑马灯；具体时长由各组件按内容长度覆盖 */
+  --jm-motion-loop-duration: 1.2s;
+
+  /* ---------- 2. 语义层：位移与缩放尺度 ---------- */
+  /* 统一"走多远"，避免每个组件各写 8px / 12px / 20px */
+  --jm-motion-distance-xs: 6px;
+  --jm-motion-distance-sm: 12px;
+  --jm-motion-distance-md: 24px;
+  --jm-motion-scale-enter: 0.92;
+  --jm-motion-scale-exit: 0.96;
+  --jm-motion-press-scale: 0.96;
+
+  /* ---------- 2. 语义层：水波纹（触感反馈，参数参照 Varlet） ---------- */
+  /* 扩散走一条"起步极快、尾巴极长"的曲线：手指离开时波纹还在往外走，像真的被按了一下。
+     140ms 的淡出是 Varlet 的实测值，比扩散短，所以退场不会糊手。 */
+  --jm-ripple-duration: var(--jm-duration-2);
+  --jm-ripple-fade-duration: 140ms;
+  --jm-ripple-ease: cubic-bezier(0.68, 0.01, 0.62, 0.6);
+  --jm-ripple-color: currentColor;
+  --jm-ripple-opacity: 0.25;
+
+  /* ---------- 2. 语义层：移动端弹层（参照 Varlet 的 250ms） ---------- */
+  /* 桌面端 Arco 那套 300/200 分离是为大屏长距离位移设计的；移动端 sheet 位移短，
+     250ms 内完成最跟手，进出对称也不会觉得"关得拖沓"。曲线换成 iOS 抽屉曲线：
+     起步快、尾巴长，落位不弹。 */
+  --jm-motion-sheet-duration: 250ms;
+  --jm-motion-sheet-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --jm-motion-scrim-duration: 250ms;
+  --jm-motion-scrim-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* 居中弹层的缩放起点：Varlet 是 0.3（很夸张），移动端对话框取 0.85 更耐看 */
+  --jm-motion-scale-pop: 0.85;
+
+  /* ---------- 3. 预设层 ---------- */
+  --jm-motion-color:
+    color var(--jm-motion-transition-duration) var(--jm-motion-transition-ease),
+    background-color var(--jm-motion-transition-duration) var(--jm-motion-transition-ease),
+    border-color var(--jm-motion-transition-duration) var(--jm-motion-transition-ease);
+
+  --jm-motion-surface:
+    background-color var(--jm-motion-transition-duration) var(--jm-motion-transition-ease),
+    border-color var(--jm-motion-transition-duration) var(--jm-motion-transition-ease),
+    box-shadow var(--jm-motion-transition-duration) var(--jm-motion-transition-ease);
+
+  --jm-motion-transform: transform var(--jm-motion-transition-duration) var(--jm-motion-transition-ease);
+
+  --jm-motion-fade: opacity var(--jm-motion-transition-duration) var(--jm-motion-transition-ease);
+
+  /* 按压反馈：位移用最短时长，颜色也跟着快，手感才跟手 */
+  --jm-motion-press:
+    transform var(--jm-motion-feedback-duration) var(--jm-motion-feedback-ease),
+    background-color var(--jm-motion-feedback-duration) var(--jm-motion-feedback-ease),
+    opacity var(--jm-motion-feedback-duration) var(--jm-motion-feedback-ease);
+
+  /* ---------- 4. 兼容别名（旧版令牌，保留避免业务方样式失效） ---------- */
+  --jm-duration-fast: var(--jm-duration-1);
+  --jm-duration-base: var(--jm-duration-2);
+  --jm-duration-slow: var(--jm-duration-3);
+  --jm-ease-out: var(--jm-ease-decelerate);
+  --jm-ease-in-out: var(--jm-ease-standard);
+  --jm-ease-spring: var(--jm-ease-overshoot);
+}
+
+/**
+ * 总闸一：系统偏好
+ * 用户在操作系统里开了「减弱动态效果」，就不该再看到位移和缩放。
+ * 保留内容完整性：只是把时长压到瞬时，不 display:none 任何东西。
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --jm-duration-1: 0ms;
+    --jm-duration-2: 0ms;
+    --jm-duration-3: 0ms;
+    --jm-duration-4: 0ms;
+    --jm-duration-5: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/**
+ * 总闸二：手动开关（<html data-motion="off">，或任意容器上局部关闭）
+ * 1) 时长阶梯归零 —— 所有读语义层的组件自动瞬时完成
+ * 2) 兜底压掉写死秒数的 transition / animation（如内联 animationDuration 的跑马灯）
+ * 3) 装饰性循环动画由各组件自己的 [data-motion='off'] 规则彻底 animation: none
+ *
+ * 用 0.01ms 而不是 none：Vue 的 <Transition> 依赖 transitionend，none 会让离场
+ * 钩子挂起直到超时；0.01ms 能立刻触发，行为更可预期。
+ */
+[data-motion='off'],
+[data-motion='off'] *,
+[data-motion='off'] *::before,
+[data-motion='off'] *::after {
+  --jm-duration-1: 0ms !important;
+  --jm-duration-2: 0ms !important;
+  --jm-duration-3: 0ms !important;
+  --jm-duration-4: 0ms !important;
+  --jm-duration-5: 0ms !important;
+
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+
+/**
+ * 必要动效白名单（可选）
+ * 默认全停，包括加载转圈。业务若认为"静态圆环看不出在加载"，给该元素加这个类即可
+ * 保留旋转——WCAG 2.3.3 允许"对理解内容必要的动效"不受限制。
+ *   <span class="jm-loading__arc jm-motion-essential" />
+ */
+[data-motion='off'] .jm-motion-essential,
+[data-motion='off'] .jm-motion-essential::before,
+[data-motion='off'] .jm-motion-essential::after {
+  animation-duration: var(--jm-motion-loop-duration) !important;
+  animation-iteration-count: infinite !important;
+}

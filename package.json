@@ -1,0 +1,30 @@
+{
+  "name": "jimu-ui-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Jimu UI - 金智安教育科技移动端 Vue3 组件库",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @jimu/docs",
+    "docs:dev": "npm run dev --workspace @jimu/docs",
+    "docs:build": "npm run build --workspace @jimu/docs",
+    "docs:preview": "npm run preview --workspace @jimu/docs",
+    "lan": "node scripts/lan-url.mjs",
+    "build:lib": "npm run build --workspace jimu-ui",
+    "build": "npm run build:lib && npm run docs:build",
+    "typecheck": "vue-tsc --noEmit -p packages/core/tsconfig.json"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vite-plugin-dts": "^4.3.0",
+    "vitepress": "^1.6.3",
+    "vue-tsc": "^2.1.10"
+  }
+}

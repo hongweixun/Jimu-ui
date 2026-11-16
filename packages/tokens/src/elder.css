@@ -1,0 +1,51 @@
+/**
+ * 适老模式
+ * 不做第二套组件，只放大基准、加厚对比、放宽行高。
+ * 挂在 <html> 或任意容器上即可局部生效：<div data-elder="true">
+ */
+[data-elder='true'] {
+  --jm-font-scale: 1.28;
+  --jm-size-scale: 1.12;
+  --jm-line-height: 1.75;
+  --jm-line-height-tight: 1.45;
+
+  --jm-text-color-2: #3d474f;
+  --jm-text-color-3: #4a555f;
+  --jm-text-color-4: #66737f;
+  --jm-border-color: var(--jm-gray-300);
+  --jm-border-color-2: var(--jm-gray-400);
+
+  --jm-radius: var(--jm-radius-lg);
+  --jm-tap-min: 52px;
+
+  /* 适老模式：焦点环加粗加远，老花眼也能一眼看出光标停在哪 */
+  --jm-focus-ring-width: 3px;
+  --jm-focus-ring-offset: 3px;
+
+  /* 适老模式下动效整体放慢一档：切换不再"闪"，但仍在 400ms 内结束，不至于拖沓。
+     依然读时长阶梯，所以 data-motion="off" 时可被一键归零 */
+  --jm-motion-feedback-duration: var(--jm-duration-2);
+  --jm-motion-transition-duration: var(--jm-duration-3);
+  --jm-motion-enter-duration: var(--jm-duration-4);
+  --jm-motion-exit-duration: var(--jm-duration-3);
+  --jm-motion-spring-duration: var(--jm-duration-4);
+  /* 弹层同理放慢：250ms → 400ms，老年人对"突然出现"更敏感 */
+  --jm-motion-sheet-duration: var(--jm-duration-4);
+  --jm-motion-scrim-duration: var(--jm-duration-3);
+  /* 水波纹也放慢并降透明度：老年人对快速闪烁的前景变化更敏感 */
+  --jm-ripple-duration: var(--jm-duration-3);
+  --jm-ripple-fade-duration: var(--jm-duration-2);
+  --jm-ripple-opacity: 0.2;
+  /* 位移也收敛：老年人对大幅位移更敏感，进场距离砍三分之一 */
+  --jm-motion-distance-md: 16px;
+  --jm-motion-distance-sm: 8px;
+}
+
+[data-theme='dark'][data-elder='true'],
+.dark [data-elder='true'] {
+  --jm-text-color-2: #cfd8e0;
+  --jm-text-color-3: #b3bec8;
+  --jm-text-color-4: #8f9ba6;
+  --jm-border-color: rgba(255, 255, 255, 0.18);
+  --jm-border-color-2: rgba(255, 255, 255, 0.28);
+}

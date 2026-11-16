@@ -1,0 +1,141 @@
+/**
+ * 语义层（semantic）
+ * 组件只允许引用这一层。换品牌色 = 改这里的 --jm-color-primary* 三五个值。
+ * 切换日夜/适老，本质是换这一段的映射。
+ */
+:root {
+  /* ---------- 字体 ---------- */
+  --jm-font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Source Han Sans SC', sans-serif;
+  --jm-font-family-number: 'SF Pro Display', -apple-system, 'Helvetica Neue', sans-serif;
+  --jm-font-scale: 1;
+  --jm-size-scale: 1;
+
+  --jm-font-size-xs: calc(11px * var(--jm-font-scale));
+  --jm-font-size-sm: calc(13px * var(--jm-font-scale));
+  --jm-font-size-md: calc(15px * var(--jm-font-scale));
+  --jm-font-size-lg: calc(17px * var(--jm-font-scale));
+  --jm-font-size-xl: calc(20px * var(--jm-font-scale));
+  --jm-line-height: 1.5;
+  --jm-line-height-tight: 1.25;
+  --jm-font-weight-normal: 400;
+  --jm-font-weight-medium: 500;
+
+  /* ---------- 间距 ---------- */
+  --jm-space-1: 4px;
+  --jm-space-2: 8px;
+  --jm-space-3: 12px;
+  --jm-space-4: 16px;
+  --jm-space-5: 20px;
+  --jm-space-6: 24px;
+  --jm-space-7: 32px;
+  --jm-space-8: 40px;
+
+  /* ---------- 圆角 ---------- */
+  --jm-radius-xs: 2px;
+  --jm-radius-sm: 4px;
+  --jm-radius-md: 8px;
+  --jm-radius-lg: 12px;
+  --jm-radius-xl: 16px;
+  --jm-radius-round: 999px;
+  /* 全局圆角基准：每个组件默认读它，也可以用组件自己的 radius 属性单独覆盖 */
+  --jm-radius: var(--jm-radius-md);
+
+  /* ---------- 控件尺寸 ---------- */
+  --jm-control-height-sm: calc(30px * var(--jm-size-scale));
+  --jm-control-height-md: calc(44px * var(--jm-size-scale));
+  --jm-control-height-lg: calc(52px * var(--jm-size-scale));
+  --jm-cell-height: calc(48px * var(--jm-size-scale));
+  --jm-tap-min: 44px;
+
+  /* ---------- 品牌色 ---------- */
+  --jm-color-primary: var(--jm-blue-500);
+  --jm-color-primary-hover: var(--jm-blue-600);
+  --jm-color-primary-active: var(--jm-blue-700);
+  --jm-color-primary-light: var(--jm-blue-50);
+  --jm-color-primary-border: var(--jm-blue-200);
+  --jm-color-primary-text: var(--jm-blue-600);
+
+  /* ---------- 功能色 ---------- */
+  --jm-color-success: var(--jm-green-500);
+  --jm-color-success-hover: var(--jm-green-600);
+  --jm-color-success-active: var(--jm-green-700);
+  --jm-color-success-light: var(--jm-green-50);
+  --jm-color-success-border: var(--jm-green-200);
+
+  --jm-color-warning: var(--jm-amber-500);
+  --jm-color-warning-hover: var(--jm-amber-600);
+  --jm-color-warning-active: var(--jm-amber-700);
+  --jm-color-warning-light: var(--jm-amber-50);
+  --jm-color-warning-border: var(--jm-amber-200);
+
+  --jm-color-danger: var(--jm-red-500);
+  --jm-color-danger-hover: var(--jm-red-600);
+  --jm-color-danger-active: var(--jm-red-700);
+  --jm-color-danger-light: var(--jm-red-50);
+  --jm-color-danger-border: var(--jm-red-200);
+
+  --jm-color-info: var(--jm-gray-600);
+  --jm-color-info-hover: var(--jm-gray-700);
+  --jm-color-info-active: var(--jm-gray-800);
+  --jm-color-info-light: var(--jm-gray-100);
+  --jm-color-info-border: var(--jm-gray-300);
+
+  /* 填充色上的文字色：保证任何主题下按钮/标签上的字都够清楚（警告色偏亮，用深字） */
+  --jm-color-primary-contrast: var(--jm-white);
+  --jm-color-success-contrast: var(--jm-white);
+  --jm-color-warning-contrast: #3b2500;
+  --jm-color-danger-contrast: var(--jm-white);
+  --jm-color-info-contrast: var(--jm-white);
+
+  /* ---------- 文本 ---------- */
+  --jm-text-color: var(--jm-gray-900);
+  --jm-text-color-2: var(--jm-gray-600);
+  --jm-text-color-3: var(--jm-gray-500);
+  --jm-text-color-4: var(--jm-gray-400);
+  --jm-text-color-inverse: var(--jm-white);
+
+  /* ---------- 背景 ---------- */
+  --jm-bg-page: var(--jm-gray-50);
+  --jm-bg-container: var(--jm-white);
+  --jm-bg-elevated: var(--jm-white);
+  --jm-bg-input: var(--jm-gray-100);
+  --jm-bg-disabled: var(--jm-gray-100);
+  --jm-bg-mask: rgba(16, 21, 26, 0.55);
+  --jm-bg-hover: rgba(16, 21, 26, 0.035);
+  --jm-bg-active: rgba(16, 21, 26, 0.07);
+
+  /* ---------- 描边 ---------- */
+  --jm-border-color: var(--jm-gray-200);
+  --jm-border-color-2: var(--jm-gray-300);
+  --jm-border-width: 1px;
+  --jm-tap-color: rgba(16, 21, 26, 0.06);
+  --jm-ring-color: rgba(0, 160, 233, 0.22);
+
+  /* ---------- 键盘焦点 ---------- */
+  /* 只在 :focus-visible（键盘 / 辅助设备导航）时出现的实心焦点环 */
+  --jm-focus-ring-color: var(--jm-color-primary);
+  --jm-focus-ring-width: 2px;
+  --jm-focus-ring-offset: 2px;
+
+  /* ---------- 阴影 ---------- */
+  --jm-shadow-1: 0 1px 2px rgba(16, 21, 26, 0.06);
+  --jm-shadow-2: 0 4px 16px rgba(16, 21, 26, 0.08);
+  --jm-shadow-3: 0 12px 32px rgba(16, 21, 26, 0.12);
+  --jm-shadow-4: 0 -4px 24px rgba(16, 21, 26, 0.08);
+
+  /* ---------- 动效 ---------- */
+  /* 时长与曲线已统一收敛到 motion.css（原始阶梯 → 语义角色 → 组合预设），
+     这里不再重复定义，避免两处数值打架 */
+
+  /* ---------- 层级 ---------- */
+  --jm-z-index-mask: 999;
+  --jm-z-index-popup: 1000;
+  --jm-z-index-toast: 2000;
+
+  /* ---------- 安全区 ---------- */
+  --jm-safe-top: env(safe-area-inset-top, 0px);
+  --jm-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --jm-safe-left: env(safe-area-inset-left, 0px);
+  --jm-safe-right: env(safe-area-inset-right, 0px);
+}

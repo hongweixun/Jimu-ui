@@ -1,0 +1,42 @@
+/**
+ * 水波纹
+ * ---------------------------------------------------------------------------
+ * 由 utils/ripple.ts 在 pointerdown 时动态插入 <span class="jm-ripple">。
+ * 几何（起点、终点、直径）全部由 JS 写进内联 CSS 变量，这里只负责"怎么动"，
+ * 所以动画时长/曲线/颜色/透明度都能通过令牌统一控制。
+ */
+
+.jm-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  display: block;
+  border-radius: 50%;
+  background: var(--jm-ripple-color, currentColor);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  /* 起点：触点位置，缩到 0.3 起步，这样小按钮上也不会"先冒一个大圆" */
+  transform: translate3d(var(--jm-ripple-x, 0), var(--jm-ripple-y, 0), 0) scale3d(0.3, 0.3, 1);
+  transition:
+    transform var(--jm-ripple-duration) var(--jm-ripple-ease),
+    opacity var(--jm-ripple-fade-duration) linear;
+}
+
+/* 终点：元素居中位置、放大到 1 —— 因为直径取了对角线，这一刻刚好盖满整个元素 */
+.jm-ripple.is-visible {
+  transform: translate3d(var(--jm-ripple-cx, 0), var(--jm-ripple-cy, 0), 0) scale3d(1, 1, 1);
+  opacity: var(--jm-ripple-opacity);
+}
+
+/* 手指离开后淡出。保留 is-visible 让 transform 停在终点，只退透明度 */
+.jm-ripple.is-fading {
+  opacity: 0;
+}
+
+/* 关掉动效时不渲染水波纹（JS 已提前 return，这里再兜一层，防止遗留节点） */
+[data-motion='off'] .jm-ripple,
+.jm-ripple.is-off {
+  display: none;
+}

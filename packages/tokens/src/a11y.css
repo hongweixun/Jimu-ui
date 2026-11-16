@@ -1,0 +1,86 @@
+/**
+ * 无障碍：键盘焦点环
+ * ---------------------------------------------------------------------------
+ * 1. 只在 :focus-visible 时出现——鼠标点击不显示，键盘 Tab / 读屏软件导航才显示，
+ *    避免给移动端点按加一圈多余的框。
+ * 2. 选择器用 [class^='jm-'] / [class*=' jm-'] 圈定组件自身元素，不污染宿主页面。
+ *    这里刻意不套 :where()：特异性要 (0,2,0)，才能压过宿主页面常见的
+ *    `button:focus { outline: auto }` 之类全局重置（那个是 (0,1,1)）。
+ * 3. 已经自带焦点反馈的组件列在下方排除，避免「光晕 + 描边」两层叠在一起。
+ */
+
+[class^='jm-']:focus-visible,
+[class*=' jm-']:focus-visible {
+  outline: var(--jm-focus-ring-width) solid var(--jm-focus-ring-color);
+  outline-offset: var(--jm-focus-ring-offset);
+}
+
+/* 自带焦点光晕 / 内层高亮的组件：不叠 outline */
+.jm-button:focus-visible,
+.jm-checkbox:focus-visible,
+.jm-checkbox__input:focus-visible,
+.jm-radio:focus-visible,
+.jm-radio__input:focus-visible,
+.jm-check-tag:focus-visible,
+.jm-fab:focus-visible,
+.jm-back-top:focus-visible,
+.jm-rate:focus-visible,
+.jm-segmented:focus-visible,
+.jm-grid__item:focus-visible,
+.jm-photo-wall__item:focus-visible,
+.jm-picker__action:focus-visible,
+.jm-slider__button:focus-visible,
+.jm-switch:focus-visible,
+.jm-swipe-cell__side button:focus-visible,
+/* 弹层面板自身是焦点落点（tabindex="-1"），焦点位置由内部控件体现 */
+.jm-dialog:focus-visible,
+.jm-popup:focus-visible {
+  outline: none;
+}
+
+/**
+ * 输入类控件：边框变色 + 外圈的柔性光晕已经是标准焦点反馈，
+ * 再描一圈实线会显得脏（移动端尤其明显），这里同样关掉。
+ */
+input[class*='jm-']:focus-visible,
+textarea[class*='jm-']:focus-visible,
+select[class*='jm-']:focus-visible,
+.jm-input:focus-visible,
+.jm-input :focus-visible,
+.jm-search :focus-visible {
+  outline: none;
+}
+
+/* 深色蒙层上的控件（图片预览）用白环，主色蓝在近黑底上对比不足 */
+.jm-image-preview:focus-visible,
+.jm-image-preview [class^='jm-']:focus-visible,
+.jm-image-preview [class*=' jm-']:focus-visible {
+  outline-color: #fff;
+}
+
+/* 高对比度偏好：加粗描边，保证在系统强制对比模式下仍然可见 */
+@media (prefers-contrast: more) {
+  [class^='jm-']:focus-visible,
+  [class*=' jm-']:focus-visible {
+    outline-width: 3px;
+    outline-offset: 3px;
+  }
+}
+
+/**
+ * 只给读屏软件的文案
+ * 视觉上不可见但仍留在无障碍树里——不要用 display:none / visibility:hidden，
+ * 那样读屏软件也读不到。用于播报「第 3 张，共 9 张」这类状态变化。
+ */
+.jm-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

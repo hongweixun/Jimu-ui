@@ -1,0 +1,50 @@
+{
+  "name": "jimu-ui",
+  "version": "0.20.0",
+  "description": "Jimu UI · 金智安教育科技移动端 Vue3 组件库",
+  "keywords": [
+    "vue3",
+    "vue",
+    "ui",
+    "components",
+    "mobile",
+    "typescript",
+    "jimu"
+  ],
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    },
+    "./resolver": {
+      "types": "./dist/resolver.d.ts",
+      "import": "./dist/resolver.mjs"
+    },
+    "./style.css": "./dist/style.css",
+    "./dist/style.css": "./dist/style.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "vite build && vue-tsc --emitDeclarationOnly --declaration --outDir dist --noEmit false"
+  },
+  "peerDependencies": {
+    "vue": "^3.3.0"
+  },
+  "dependencies": {
+    "@jimu/tokens": "*"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

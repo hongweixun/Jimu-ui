@@ -1,0 +1,74 @@
+/**
+ * 夜间皮肤
+ * 只重写“语义层”，原始色板不动，组件代码零改动。
+ * 选择器同时支持 [data-theme="dark"]（显式控制）和 .dark（兼容 VitePress / Tailwind 体系）。
+ *
+ * 注意：实心填充色保持 500 档不往浅调，否则白字对比度会掉；
+ * 需要“在深色底上做文字/图标”的场景走 *-text 系列（如 --jm-color-primary-text）。
+ */
+[data-theme='dark'],
+.dark {
+  --jm-color-primary: var(--jm-blue-500);
+  --jm-color-primary-hover: var(--jm-blue-400);
+  --jm-color-primary-active: var(--jm-blue-300);
+  --jm-color-primary-light: rgba(0, 160, 233, 0.16);
+  --jm-color-primary-border: rgba(0, 160, 233, 0.42);
+  --jm-color-primary-text: var(--jm-blue-300);
+
+  --jm-color-success: var(--jm-green-500);
+  --jm-color-success-hover: var(--jm-green-400);
+  --jm-color-success-active: var(--jm-green-300);
+  --jm-color-success-light: rgba(0, 185, 138, 0.16);
+  --jm-color-success-border: rgba(0, 185, 138, 0.42);
+
+  --jm-color-warning: var(--jm-amber-500);
+  --jm-color-warning-hover: var(--jm-amber-400);
+  --jm-color-warning-active: var(--jm-amber-300);
+  --jm-color-warning-light: rgba(255, 159, 28, 0.16);
+  --jm-color-warning-border: rgba(255, 159, 28, 0.42);
+
+  --jm-color-danger: var(--jm-red-500);
+  --jm-color-danger-hover: var(--jm-red-400);
+  --jm-color-danger-active: var(--jm-red-300);
+  --jm-color-danger-light: rgba(232, 52, 75, 0.18);
+  --jm-color-danger-border: rgba(232, 52, 75, 0.44);
+
+  --jm-color-info: var(--jm-gray-500);
+  --jm-color-info-hover: var(--jm-gray-400);
+  --jm-color-info-active: var(--jm-gray-300);
+  --jm-color-info-light: rgba(255, 255, 255, 0.08);
+  --jm-color-info-border: rgba(255, 255, 255, 0.16);
+
+  --jm-color-primary-contrast: var(--jm-white);
+  --jm-color-success-contrast: var(--jm-white);
+  --jm-color-warning-contrast: #3b2500;
+  --jm-color-danger-contrast: var(--jm-white);
+  --jm-color-info-contrast: var(--jm-white);
+
+  --jm-text-color: #e8edf2;
+  --jm-text-color-2: #a7b3bf;
+  --jm-text-color-3: #7d8a96;
+  --jm-text-color-4: #5b6672;
+  --jm-text-color-inverse: var(--jm-gray-950);
+
+  --jm-bg-page: #0f1317;
+  --jm-bg-container: #171c21;
+  --jm-bg-elevated: #1f262d;
+  --jm-bg-input: rgba(255, 255, 255, 0.06);
+  --jm-bg-disabled: rgba(255, 255, 255, 0.08);
+  --jm-bg-mask: rgba(0, 0, 0, 0.68);
+  --jm-bg-hover: rgba(255, 255, 255, 0.05);
+  --jm-bg-active: rgba(255, 255, 255, 0.09);
+
+  --jm-border-color: rgba(255, 255, 255, 0.1);
+  --jm-border-color-2: rgba(255, 255, 255, 0.18);
+  --jm-tap-color: rgba(255, 255, 255, 0.08);
+  --jm-ring-color: rgba(31, 178, 237, 0.3);
+
+  --jm-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --jm-shadow-2: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --jm-shadow-3: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --jm-shadow-4: 0 -4px 24px rgba(0, 0, 0, 0.45);
+
+  color-scheme: dark;
+}

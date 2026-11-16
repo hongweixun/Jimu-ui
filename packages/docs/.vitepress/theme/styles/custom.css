@@ -1,0 +1,232 @@
+/* Jimu UI 文档站样式：品牌色对齐 #00A0E9 */
+
+:root {
+  --vp-c-brand-1: #0087c6;
+  --vp-c-brand-2: #00a0e9;
+  --vp-c-brand-3: #00a0e9;
+  --vp-c-brand-soft: rgba(0, 160, 233, 0.12);
+  --vp-c-brand-softer: rgba(0, 160, 233, 0.06);
+
+  --vp-font-family-base: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --vp-font-family-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --vp-layout-max-width: 1480px;
+  --vp-sidebar-width: 260px;
+}
+
+.dark {
+  --vp-c-brand-1: #4cc3f5;
+  --vp-c-brand-2: #00a0e9;
+  --vp-c-brand-3: #1fb2ed;
+  --vp-c-brand-soft: rgba(0, 160, 233, 0.16);
+  --vp-c-brand-softer: rgba(0, 160, 233, 0.08);
+}
+
+/* 顶部导航 */
+.VPNavBar .title {
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+/* 品牌标识：三块积木拼成的 J（mark-02-j-assembly） */
+.VPNavBar .logo {
+  height: 26px;
+  width: 26px;
+  transition: transform 0.25s var(--vp-ease-cubic-bezier, cubic-bezier(0.22, 0.61, 0.36, 1));
+}
+
+.VPNavBar .logo:hover {
+  transform: rotate(-8deg) scale(1.08);
+}
+
+/* 首页 Hero 标识 */
+.VPHome .VPHero .VPImage {
+  width: 136px;
+  height: 136px;
+  filter: drop-shadow(0 12px 28px rgba(91, 91, 214, 0.22));
+}
+
+.dark .VPHome .VPHero .VPImage {
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+}
+
+.VPNavBar.has-sidebar .content {
+  padding-left: 0;
+}
+
+/* 首页 Hero */
+.VPHero .name {
+  background: linear-gradient(120deg, #00a0e9 0%, #0087c6 40%, #00b98a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 44px !important;
+  letter-spacing: -1px;
+}
+
+.VPHero .text {
+  font-size: 30px !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.5px;
+}
+
+.VPHero .tagline {
+  font-size: 15px;
+  line-height: 1.7;
+  max-width: 520px;
+}
+
+.VPButton.brand {
+  border-radius: 8px;
+}
+
+.VPButton.alt {
+  border-radius: 8px;
+}
+
+/* 内容区 */
+.vp-doc h1 {
+  font-size: 30px;
+  letter-spacing: -0.6px;
+  margin-bottom: 8px;
+}
+
+.vp-doc h2 {
+  font-size: 21px;
+  margin-top: 44px;
+  padding-top: 22px;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc h3 {
+  font-size: 16px;
+  margin-top: 28px;
+}
+
+.vp-doc > p {
+  line-height: 1.75;
+}
+
+.vp-doc a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* 表格：API 说明表 */
+.vp-doc table {
+  display: table;
+  width: 100%;
+  margin: 16px 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.vp-doc th {
+  background: var(--vp-c-bg-soft);
+  font-weight: 500;
+  font-size: 12.5px;
+  color: var(--vp-c-text-2);
+  text-align: left;
+}
+
+.vp-doc th,
+.vp-doc td {
+  padding: 9px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--vp-c-divider);
+  vertical-align: top;
+}
+
+.vp-doc tr:last-child td {
+  border-bottom: 0;
+}
+
+.vp-doc tr:nth-child(2n) {
+  background: transparent;
+}
+
+.vp-doc td code,
+.vp-doc th code {
+  font-size: 12px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--vp-c-brand-softer);
+  color: var(--vp-c-brand-1);
+}
+
+/* 代码块 */
+.vp-doc div[class*='language-'] {
+  border-radius: 10px;
+  margin: 14px 0;
+}
+
+.vp-doc :not(pre) > code {
+  background: var(--vp-c-brand-softer);
+  color: var(--vp-c-text-1);
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.86em;
+}
+
+/* 侧边栏 */
+.VPSidebarItem.level-1 > .item > .text {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.VPSidebarItem.is-active > .item .link > .text {
+  color: var(--vp-c-brand-1);
+  font-weight: 500;
+}
+
+/* 提示块 */
+.vp-doc .custom-block {
+  border-radius: 10px;
+  border-width: 1px;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+/* 首页功能区 */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 28px 0 8px;
+}
+
+.feature-card {
+  display: block;
+  padding: 16px 18px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background: var(--vp-c-bg-soft);
+  text-decoration: none !important;
+  transition: all 0.2s;
+}
+
+.feature-card:hover {
+  border-color: var(--vp-c-brand-2);
+  transform: translateY(-2px);
+}
+
+.feature-card__name {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-text-1);
+}
+
+.feature-card__desc {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+}
