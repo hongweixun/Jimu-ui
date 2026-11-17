@@ -79,8 +79,9 @@ const gridStyle = computed(() => {
   --jm-desc-label-w: 72px;
   --jm-desc-border-color: var(--jm-border-color);
   --jm-desc-label-bg: var(--jm-bg-page);
-  --jm-desc-padding-y: 10px;
+  --jm-desc-padding-y: 8px;
   --jm-desc-padding-x: 10px;
+  --jm-desc-pad-inline: 16px;
   box-sizing: border-box;
   display: grid;
   margin: 0;
@@ -95,16 +96,18 @@ const gridStyle = computed(() => {
 .jm-descriptions--small {
   --jm-desc-padding-y: 5px;
   --jm-desc-padding-x: 8px;
+  --jm-desc-pad-inline: 12px;
 }
 
 .jm-descriptions--large {
   --jm-desc-padding-y: 12px;
   --jm-desc-padding-x: 14px;
+  --jm-desc-pad-inline: 20px;
 }
 
-/* 无表格线时行与行之间留出呼吸间距；border 模式靠单元格边框收口，不能加 row-gap */
+/* 内容与白色背景之间的左右呼吸空间；border 模式线条要贯穿到边，交给单元格自身的 padding */
 .jm-descriptions:not(.is-border) {
-  row-gap: 10px;
+  padding: 4px var(--jm-desc-pad-inline);
 }
 
 .jm-descriptions__title {

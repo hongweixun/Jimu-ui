@@ -93,12 +93,15 @@ time.sleep(1.0)
 de = js("""(()=>{
   const d=document.querySelector('.jm-descriptions:not(.is-border)');
   const c=getComputedStyle(d);
-  const cell=getComputedStyle(d.querySelector('.jm-descriptions__cell'));
-  return JSON.stringify({rowGap:c.rowGap, padY:cell.paddingTop});
+  const cr=d.querySelector('.jm-descriptions__label').getBoundingClientRect();
+  const dr=d.getBoundingClientRect();
+  return JSON.stringify({padL:c.paddingLeft, padR:c.paddingRight, gapL:Math.round(cr.left-dr.left)});
 })()""")
 d = json.loads(de)
-check("descriptions", "row-gap 10px", d["rowGap"], "10px")
-check("descriptions", "cell padding-y 10px", d["padY"], "10px")
+check("descriptions", "inline padding 16px (content vs card edge)", d["padL"], "16px")
+check("descriptions", "label inset 16px from card edge", d["gapL"], 16)
+padY = js("getComputedStyle(document.querySelector('.jm-descriptions:not(.is-border) .jm-descriptions__label')).paddingTop")
+check("descriptions", "cell padding-y back to 8px", padY, "8px")
 
 # ================= Popover 视口回移 =================
 print("== popover clamp ==")

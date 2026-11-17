@@ -101,6 +101,7 @@ description: 键值对详情展示，支持多列、跨列、表格线与标签�
 | `--jm-desc-label-w` | 标签列宽兜底值 | `72px` |
 | `--jm-desc-border-color` | 表格线颜色 | `--jm-border-color` |
 | `--jm-desc-label-bg` | 标签列底色（表格线模式） | `--jm-bg-page` |
+| `--jm-desc-pad-inline` | 内容与白色背景之间的左右间距（无边框模式） | `16px`（small `12px` / large `20px`） |
 
 ## 无障碍
 

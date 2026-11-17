@@ -103,7 +103,7 @@ import Video from './components/Video.vue'
 import { setupAppearance } from './composables/useAppearance'
 import { vRipple } from './utils/ripple'
 
-export const version = '0.24.0'
+export const version = '0.24.1'
 
 export {
   Button,
