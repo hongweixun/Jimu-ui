@@ -117,7 +117,7 @@ function rapidClick() {
   border: 0;
   border-radius: var(--jm-radius-round);
   background: var(--jm-color-primary);
-  color: var(--jm-color-primary-text);
+  color: var(--jm-color-primary-contrast, #fff);
   font-size: var(--jm-font-size-sm);
   cursor: pointer;
 }

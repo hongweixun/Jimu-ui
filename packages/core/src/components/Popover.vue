@@ -157,7 +157,12 @@ const panelStyle = computed(() => {
   position: absolute;
   z-index: 1200;
   box-sizing: border-box;
-  padding: 8px 12px;
+  /* 绝对定位的面板默认 shrink-to-fit，可用宽度会被包含块掐得很窄，
+     长文案会被挤成一列竖排字；显式给 max-content 才按内容自然排 */
+  width: max-content;
+  /* 没传 maxWidth 时的兜底：太长的文案仍然折行，不撑出屏幕 */
+  max-width: min(86vw, 320px);
+  padding: 10px 14px;
   border-radius: var(--jm-radius-md);
   font-size: var(--jm-font-size-sm);
   line-height: 1.5;
@@ -217,6 +222,8 @@ const panelStyle = computed(() => {
 .jm-popover.is-right .jm-popover__panel {
   left: auto;
   right: auto;
+  /* 左右方向垂直居中：重申 transform，防止被 is-align-center 的 translateX 覆盖 */
+  transform: translateY(-50%);
 }
 
 .jm-popover.is-right .jm-popover__panel {

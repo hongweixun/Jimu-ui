@@ -117,8 +117,10 @@ const status = computed<StepStatus>(() => props.status ?? ctx?.getStatus(index.v
 
 .jm-step.is-process .jm-step__dot {
   border-color: var(--jm-step-active, var(--jm-color-primary));
-  color: var(--jm-step-active, var(--jm-color-primary));
-  box-shadow: 0 0 0 3px var(--jm-ring-color);
+  background: var(--jm-step-active, var(--jm-color-primary));
+  color: var(--jm-color-primary-contrast);
+  /* 柔光圈：与已完成步形成同族实心圆，靠颜色深浅与标题高亮区分层级 */
+  box-shadow: 0 0 0 4px var(--jm-ring-color);
 }
 
 .jm-step.is-error .jm-step__dot {

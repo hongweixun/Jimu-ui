@@ -65,7 +65,7 @@ description: 点击触发器展开的轻量浮层，支持上下左右四个方�
 | disabled | 禁用 | `boolean` | `false` |
 | closeOnClickOutside | 点外部关闭 | `boolean` | `true` |
 | closeOnClickContent | 点内容关闭 | `boolean` | `false` |
-| maxWidth | 面板最大宽度 | `number \| string` | - |
+| maxWidth | 面板最大宽度 | `number \| string` | `min(86vw, 320px)` |
 | zIndex | 层级 | `number` | `1200` |
 
 ### Events

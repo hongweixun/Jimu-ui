@@ -410,6 +410,9 @@ defineExpose({
 .jm-tooltip.is-right .jm-tooltip__panel {
   left: auto;
   right: auto;
+  /* 左右方向垂直居中：transform 必须在这里重申，
+     否则会被下面（源码顺序更后的）is-align-center 的 translateX 覆盖 */
+  transform: translateY(-50%);
 }
 
 .jm-tooltip.is-right .jm-tooltip__panel {

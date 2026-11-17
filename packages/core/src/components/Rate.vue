@@ -219,6 +219,9 @@ function onKeydown(e: KeyboardEvent) {
   right: auto;
   left: 0;
   width: 50%;
+  /* 半星热区必须压在整星热区之上：整星热区 100% 宽且 DOM 顺序靠后，
+     不抬层级的话左半边的点击永远落不到半星上 */
+  z-index: 1;
 }
 
 .jm-rate__text {

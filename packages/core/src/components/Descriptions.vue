@@ -102,6 +102,11 @@ const gridStyle = computed(() => {
   --jm-desc-padding-x: 14px;
 }
 
+/* 无表格线时行与行之间留出呼吸间距；border 模式靠单元格边框收口，不能加 row-gap */
+.jm-descriptions:not(.is-border) {
+  row-gap: 6px;
+}
+
 .jm-descriptions__title {
   grid-column: 1 / -1;
   padding: 0 0 8px;

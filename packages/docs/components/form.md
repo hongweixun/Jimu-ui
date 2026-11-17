@@ -110,6 +110,12 @@ const rules = {
 
 处于错误态的字段在输入过程中仍会**全量复检**——改对了立即恢复，不用等失焦。
 
+## 常用控件整合
+
+整行模式的 FormItem 能装下任何控件——单选、多选、下拉（Cell + Popup + Picker）、半星评分、步进器、开关、图片上传、多行备注，全部纳入同一套校验与提交流程：
+
+<DemoBlock src="/demos/form/controls.vue" title="Radio / Checkbox / Picker / Rate / Stepper / Switch / Uploader 整合演示" desc="性别单选、服务标签多选、城市下拉选择（底部弹层 Picker）、半星评分、限购步进器、物流通知开关、凭证照片上传与备注，点提交统一校验。" />
+
 ## 提交与重置
 
 `<form>` 原生提交被接管：校验通过才触发 `submit`，否则触发 `failed`（带上每条错误）：

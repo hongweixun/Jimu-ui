@@ -101,7 +101,7 @@ import Pagination from './components/Pagination.vue'
 import { setupAppearance } from './composables/useAppearance'
 import { vRipple } from './utils/ripple'
 
-export const version = '0.22.0'
+export const version = '0.23.0'
 
 export {
   Button,

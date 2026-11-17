@@ -73,8 +73,10 @@ function toggle() {
   border: 0;
   border-radius: var(--jm-radius-round);
   background: var(--jm-color-primary);
-  color: var(--jm-color-primary-text);
+  /* 实心主色底上必须用对比色文字；--jm-color-primary-text 是浅底蓝字，会蓝底蓝字 */
+  color: var(--jm-color-primary-contrast, #fff);
   font-size: var(--jm-font-size-sm);
+  font-weight: var(--jm-font-weight-medium);
   cursor: pointer;
 }
 
@@ -88,6 +90,6 @@ function toggle() {
 
 .demo-tip {
   font-size: var(--jm-font-size-sm);
-  color: var(--jm-color-primary-text);
+  color: var(--jm-text-color-3);
 }
 </style>

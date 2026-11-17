@@ -177,7 +177,11 @@ function onToken(token: Token) {
 
 <style>
 .jm-pagination {
+  /* 组件自身作为容器：宽度不够时按容器（而非视口）收缩箭头文字，
+     放进手机模拟框、侧栏等窄容器里也能正确收起 */
+  container-type: inline-size;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--jm-space-2);
   width: 100%;
@@ -290,8 +294,9 @@ function onToken(token: Token) {
   transition: none;
 }
 
-/* ---------- 小屏：页面多时把箭头文字收起来，只留箭头 ---------- */
-@media (max-width: 420px) {
+/* ---------- 窄容器：页面多时把箭头文字收起来，只留箭头 ---------- */
+/* 容器查询：跟着组件自身宽度走（模拟框/侧栏/半屏弹层里也正确） */
+@container (max-width: 420px) {
   .jm-pagination__prev span,
   .jm-pagination__next span {
     display: none;
@@ -300,6 +305,47 @@ function onToken(token: Token) {
   .jm-pagination__prev,
   .jm-pagination__next {
     padding: 0 6px;
+  }
+
+  .jm-pagination {
+    gap: 6px;
+  }
+
+  .jm-pagination__pages {
+    gap: 0;
+  }
+
+  .jm-pagination__page {
+    min-width: 28px;
+    padding: 0 2px;
+  }
+
+  .jm-pagination__more {
+    width: 26px;
+  }
+}
+
+/* 旧浏览器兜底：按视口宽度收窄（与容器查询规则一致，不冲突） */
+@supports not (container-type: inline-size) {
+  @media (max-width: 420px) {
+    .jm-pagination__prev span,
+    .jm-pagination__next span {
+      display: none;
+    }
+
+    .jm-pagination__prev,
+    .jm-pagination__next {
+      padding: 0 6px;
+    }
+
+    .jm-pagination__page {
+      min-width: 28px;
+      padding: 0 2px;
+    }
+
+    .jm-pagination__more {
+      width: 26px;
+    }
   }
 }
 </style>

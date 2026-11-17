@@ -26,6 +26,21 @@ const active = ref<(string | number)[]>(['faq1'])
 </template>
 ```
 
+## 圆角卡片
+
+`round` 让整个折叠面板变成一张圆角卡片，配合 `:border="false"` 去掉上下通栏边线，是最常用的 FAQ 卡片样式；`round` 传数字可自定义圆角（按 px），不传值时用默认大圆角：
+
+```html
+<!-- 圆角 + 去上下边框 + 浅阴影 -->
+<jm-collapse v-model="active" :border="false" round />
+
+<!-- 圆角 10px + 描边 -->
+<jm-collapse v-model="active" :round="10" />
+
+<!-- 圆角大小也可以走 CSS 变量全局调 -->
+<jm-collapse v-model="active" round style="--jm-collapse-radius: 20px" />
+```
+
 ## API
 
 ### Collapse Props
@@ -34,7 +49,14 @@ const active = ref<(string | number)[]>(['faq1'])
 | --- | --- | --- | --- |
 | v-model | 展开项的 name；手风琴模式传单个值 | `(string \| number)[]` | `[]` |
 | accordion | 手风琴模式 | `boolean` | `false` |
-| border | 上下外边框 | `boolean` | `true` |
+| border | 上下外边框；round 时变成整圈描边 | `boolean` | `true` |
+| round | 整体圆角卡片；`true` 用默认圆角，数字按 px，字符串原样 | `boolean \| number \| string` | `false` |
+
+### CSS 变量
+
+| 变量 | 说明 | 默认值 |
+| --- | --- | --- |
+| `--jm-collapse-radius` | round 模式的圆角 | `var(--jm-radius-lg)`（12px） |
 
 ### CollapseItem Props
 
