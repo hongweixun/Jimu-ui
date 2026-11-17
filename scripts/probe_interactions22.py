@@ -135,6 +135,24 @@ for name, cls in markers:
     check("popover", f"{name} within phone right", r["prt"] <= r["hrt"] + 1, True)
     check("popover", f"{name} within phone top", r["pt"] >= r["ht"] - 1, True)
     check("popover", f"{name} within phone bottom", r["pb"] <= r["hb"] + 1, True)
+    # 箭头跟随触发器：箭头中心应等于触发器中心钳制进面板安全区后的位置（±6px）
+    arow = tab.js(
+        "(()=>{const host=document.querySelectorAll('.jm-popover')[" + str(idx) + "];"
+        "const a=host.querySelector('.jm-popover__arrow');const p=host.querySelector('.jm-popover__panel');"
+        "if(!a||!p)return 'null';"
+        "const ar=a.getBoundingClientRect();const hr=host.getBoundingClientRect();const pr=p.getBoundingClientRect();"
+        "return JSON.stringify({acx:Math.round(ar.left+ar.width/2),tcx:Math.round(hr.left+hr.width/2),acy:Math.round(ar.top+ar.height/2),tcy:Math.round(hr.top+hr.height/2),pl:Math.round(pr.left),prt:Math.round(pr.right),pt:Math.round(pr.top),pb:Math.round(pr.bottom)});})()"
+    )
+    if isinstance(arow, str) and arow.startswith("{"):
+        a = json.loads(arow)
+        if name in ("top", "bottom"):
+            exp = max(a["pl"] + 12, min(a["prt"] - 12, a["tcx"]))
+            check("popover", f"{name} arrow tracks trigger x", abs(a["acx"] - exp) <= 6, True)
+        else:
+            exp = max(a["pt"] + 12, min(a["pb"] - 12, a["tcy"]))
+            check("popover", f"{name} arrow tracks trigger y", abs(a["acy"] - exp) <= 6, True)
+    else:
+        check("popover", f"{name} arrow locate", False, True)
     mouse_click(5, 5)
     time.sleep(0.4)
 tab.send("Emulation.clearDeviceMetricsOverride")

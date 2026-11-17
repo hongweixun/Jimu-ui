@@ -110,6 +110,9 @@ const panelStyle = computed(() => {
   /* 视口回移量：渲染后测量面板，越界部分用 margin 拉回来 */
   s['--jm-popover-shift-x'] = `${shiftX.value}px`
   s['--jm-popover-shift-y'] = `${shiftY.value}px`
+  /* 箭头位置（相对面板的 px 坐标）：回移后跟随触发器 */
+  if (arrowX.value !== null) s['--jm-popover-arrow-cx'] = `${arrowX.value}px`
+  if (arrowY.value !== null) s['--jm-popover-arrow-cy'] = `${arrowY.value}px`
   return s
 })
 
@@ -120,6 +123,30 @@ const panelStyle = computed(() => {
 const panelRef = ref<HTMLElement | null>(null)
 const shiftX = ref(0)
 const shiftY = ref(0)
+/* 箭头中心相对面板的 px 坐标（null = 用 CSS 默认定位） */
+const arrowX = ref<number | null>(null)
+const arrowY = ref<number | null>(null)
+
+/* 箭头跟随触发器：面板被回移后，居中/贴边的默认箭头会偏离触发器，
+   按触发器中心重新定位（限制在面板安全区内，避免顶到圆角外） */
+function syncArrow(r: DOMRect, dx: number, dy: number) {
+  const host = root.value
+  if (!props.arrow || !host) return
+  const tr = host.getBoundingClientRect()
+  if (props.placement === 'top' || props.placement === 'bottom') {
+    const cx = tr.left + tr.width / 2 - (r.left + dx)
+    const min = Math.min(12, r.width / 2)
+    const max = Math.max(r.width - 12, r.width / 2)
+    arrowX.value = Math.round(Math.min(max, Math.max(min, cx)))
+    arrowY.value = null
+  } else {
+    const cy = tr.top + tr.height / 2 - (r.top + dy)
+    const min = Math.min(12, r.height / 2)
+    const max = Math.max(r.height - 12, r.height / 2)
+    arrowY.value = Math.round(Math.min(max, Math.max(min, cy)))
+    arrowX.value = null
+  }
+}
 
 function clampToViewport() {
   const el = panelRef.value
@@ -163,8 +190,11 @@ function clampToViewport() {
   if (boxR - boxL < 40 || boxB - boxT < 40) return /* 裁剪容器过小，回移没有意义 */
   /* 增量累加而不是绝对覆盖：测量值已包含之前应用的 margin，
      直接赋绝对值会在复测时把上一次的偏移抵消掉 */
+  const prevX = shiftX.value
+  const prevY = shiftY.value
   shiftX.value += Math.round(left < boxL ? boxL - left : right > boxR ? boxR - right : 0)
   shiftY.value += Math.round(top < boxT ? boxT - top : bottom > boxB ? boxB - bottom : 0)
+  syncArrow(r, shiftX.value - prevX, shiftY.value - prevY)
 }
 
 watch(
@@ -184,6 +214,8 @@ watch(
     } else {
       shiftX.value = 0
       shiftY.value = 0
+      arrowX.value = null
+      arrowY.value = null
     }
   },
 )
@@ -341,29 +373,26 @@ watch(
   transform: rotate(45deg);
 }
 
+/* 上下方向：箭头水平位置由面板注入的 --jm-popover-arrow-cx 控制
+   （打开后 JS 按触发器中心计算，回移时跟随；未注入时居中兜底） */
+.jm-popover.is-top .jm-popover__arrow,
+.jm-popover.is-bottom .jm-popover__arrow {
+  left: var(--jm-popover-arrow-cx, 50%);
+  right: auto;
+  margin-left: -4px;
+}
+
+/* 左右方向：箭头垂直位置由 --jm-popover-arrow-cy 控制 */
 .jm-popover.is-left .jm-popover__arrow {
   right: -3.5px;
-  top: 50%;
+  top: var(--jm-popover-arrow-cy, 50%);
   transform: translateY(-50%) rotate(45deg);
 }
 
 .jm-popover.is-right .jm-popover__arrow {
   left: -3.5px;
-  top: 50%;
+  top: var(--jm-popover-arrow-cy, 50%);
   transform: translateY(-50%) rotate(45deg);
-}
-
-.jm-popover.is-align-center .jm-popover__arrow {
-  left: 50%;
-  margin-left: -4px;
-}
-
-.jm-popover.is-align-start .jm-popover__arrow {
-  left: 12px;
-}
-
-.jm-popover.is-align-end .jm-popover__arrow {
-  right: 12px;
 }
 
 .jm-popover.is-left .jm-popover__arrow,

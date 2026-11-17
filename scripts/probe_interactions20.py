@@ -165,7 +165,9 @@ mouse_click(5, 5)
 time.sleep(0.4)
 
 # ================= Pagination 无重叠 =================
+# 移动端组件按手机宽度测：桌面窗口太窄时 flex-wrap 换行会让不同行的元素水平重叠，属于误判
 print("== pagination ==")
+tab.send("Emulation.setDeviceMetricsOverride", {"width": 400, "height": 780, "deviceScaleFactor": 1, "mobile": True})
 goto("/components/pagination")
 wait_for("document.querySelectorAll('.jm-pagination').length >= 2")
 time.sleep(1.2)
@@ -185,6 +187,7 @@ overlap = js("""(()=>{
   return JSON.stringify(bad);
 })()""")
 check("pagination", "no overlap between arrows and page numbers", json.loads(overlap), [])
+tab.send("Emulation.clearDeviceMetricsOverride")
 
 # ================= Steps 当前步样式 =================
 print("== steps ==")
