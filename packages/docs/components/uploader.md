@@ -85,6 +85,16 @@ async function upload(file, { onProgress }) {
 
 默认点击缩略图打开内置放大预览（基于 `Popup`）。文档示例传了 `:preview-teleport="false"` 让弹层留在手机框内；真实项目默认挂到 body 即可。需要接自己的图片查看器时，关掉 `preview-image` 并监听 `click-preview`。
 
+## 自定义格子比例
+
+`ratio` 控制格子的宽高比——不只是正方形：寸照用 `'3:4'`，横图用 `'16:9'`，数字表示宽/高比（`0.75` 等价 `'3:4'`）。配合 `columns` / `size` / `radius` 可以拼出任何版式。
+
+## 附件列表布局
+
+`layout="list"` 把九宫格换成**附件列表**：文字性的「上传附件」按钮、每行文件名 + 大小 + 状态（上传中百分比 / 失败重试 / 待上传）+ 删除按钮，标题行显示计数。文档类作业材料、报销凭证这类"要的是清单不是照片墙"的场景更清爽。
+
+<DemoBlock src="/demos/uploader/layout.vue" title="三种形态平铺对比（不在手机框内）" desc="寸照 3:4、横图 16:9、附件列表——同一格子系统，比例与布局随内容走。" :phone="false" />
+
 ## API
 
 ### Props
@@ -104,11 +114,15 @@ async function upload(file, { onProgress }) {
 | readonly | 只读（保留缩略图） | `boolean` | `false` |
 | deletable | 显示删除按钮 | `boolean` | `true` |
 | preview-image | 点击缩略图放大预览 | `boolean` | `true` |
-| upload-text | 上传区文案 | `string` | `'上传'` |
-| columns | 每行列数 | `number` | `4` |
-| size | 格子尺寸 | `number \| string` | `80` |
+| upload-text | 上传区文案（list 布局为按钮文案） | `string` | `'上传'` |
+| columns | 每行列数（grid 布局） | `number` | `4` |
+| size | 格子尺寸（grid 布局） | `number \| string` | `80` |
+| ratio | 格子宽高比：`'1:1'` / `'3:4'` / `'16:9'` / 数字（宽/高） | `number \| string` | `'1:1'` |
+| layout | 布局 `'grid'` 九宫格 / `'list'` 附件列表 | `string` | `'grid'` |
+| show-count | 显示计数（list 布局标题行） | `boolean` | `true` |
+| count-text | 计数文案前缀 | `string` | `'已传'` |
 | radius | 格子圆角 | `number \| string` | `var(--jm-radius-md)` |
-| sortable | 开启长按拖拽排序 | `boolean` | `false` |
+| sortable | 开启长按拖拽排序（仅 grid） | `boolean` | `false` |
 | name | input 的 name | `string` | `'file'` |
 | preview-teleport | 预览弹层挂载位置 | `boolean \| string \| Element` | `true` |
 | upload | 自定义上传函数 | `(file, { onProgress }) => Promise<string \| void>` | — |

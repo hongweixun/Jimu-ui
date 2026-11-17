@@ -21,7 +21,7 @@ jimu-ui/
 │  │     └─ motion.css       动效开关与降级
 │  ├─ core/          组件库本体
 │  │  └─ src/
-│  │     ├─ components/      89 个组件
+│  │     ├─ components/      90 个组件
 │  │     ├─ composables/     useCountDown / useSwipe 等 8 个
 │  │     ├─ directives/      v-longpress / v-copy / v-lazy
 │  │     ├─ utils/
@@ -77,14 +77,14 @@ export default defineConfig({
 
 模板里直接写 `<jm-button />`，组件和对应样式自动引入，不需要手动 import。
 
-## 组件清单（89 个）
+## 组件清单（90 个）
 
 | 分类 | 组件 |
 | --- | --- |
 | 基础 | Button、Cell / CellGroup、Tag、CheckTag、Badge、Divider、Icon、Space、Layout（Row / Col）、Grid / GridItem、Avatar / AvatarGroup、Fab、Image、PhotoWall、Card、Watermark、Progress、Circle、CountDown、Statistic、Descriptions、Tree、Table、Transfer |
 | 导航 | NavBar、Tabbar / TabbarItem、Tabs / Tab、Segmented、Sticky、DropdownMenu / DropdownItem、Popover、Tooltip、Steps / Step、Timeline / TimelineItem、IndexBar / IndexAnchor、Pagination、BackTop、VirtualList |
 | 表单 | Form / FormItem、Input、Search、Switch、Checkbox / CheckboxGroup、Radio / RadioGroup、Rate、Stepper、Slider、Picker、CascadePicker、DatePicker、Calendar、NumberKeyboard、PasswordInput、Uploader、Signature、TreeSelect |
-| 反馈 | Popup、ActionSheet、Dialog、Toast（函数式 `showToast()`）、Notify（函数式 `showNotify()`）、Loading、Empty、Result、Skeleton、Swipe / SwipeItem、ImagePreview（函数式 `showImagePreview()`）、List、PullRefresh、Collapse / CollapseItem、SwipeCell、LoadingBar（函数式 `showLoadingBar()`） |
+| 反馈 | Popup、ActionSheet、Dialog、Toast（函数式 `showToast()`）、Notify（函数式 `showNotify()`）、Loading、Empty、Result、Skeleton、Swipe / SwipeItem、ImagePreview（函数式 `showImagePreview()`）、List、PullRefresh、Collapse / CollapseItem、SwipeCell、LoadingBar（函数式 `showLoadingBar()`）、Scanner 扫描动效 |
 | 指令 | v-ripple 水波纹（Button / Cell / ActionSheet / Dialog / Card 已内置）、v-longpress 长按、v-copy 复制、v-lazy 懒加载 |
 | 组合式函数 | useCountDown、useClickOutside(When)、useLockScroll、useSwipe、useDebounceFn、useThrottleFn、useIntersection、useFocusTrap、useAppearance |
 

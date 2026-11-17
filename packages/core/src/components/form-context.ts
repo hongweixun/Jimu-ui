@@ -52,6 +52,11 @@ export interface FormContext {
   showError: ComputedRef<boolean>
   /** 整表禁用：内部所有控件继承 */
   disabled: ComputedRef<boolean>
+  /**
+   * 表单级校验时机（vant 的 validate-trigger）：只约束「未声明 trigger 的规则」。
+   * 规则自己声明了 trigger 就以声明为准。
+   */
+  validateTrigger: ComputedRef<FormValidateTrigger[]>
   registerField: (field: FormFieldHandle) => void
   unregisterField: (field: FormFieldHandle) => void
 }
@@ -225,9 +230,13 @@ export async function runRules(
   return ''
 }
 
-/** 规则是否响应某个触发时机（未声明 trigger 视为都响应） */
-export function ruleMatchesTrigger(rule: FormRule, trigger: FormValidateTrigger): boolean {
-  if (!rule.trigger) return true
+/** 规则是否响应某个触发时机；未声明 trigger 的规则跟随表单级 validateTrigger（默认 blur+change） */
+export function ruleMatchesTrigger(
+  rule: FormRule,
+  trigger: FormValidateTrigger,
+  defaults: FormValidateTrigger[] = ['blur', 'change'],
+): boolean {
+  if (!rule.trigger) return defaults.includes(trigger)
   return Array.isArray(rule.trigger) ? rule.trigger.includes(trigger) : rule.trigger === trigger
 }
 

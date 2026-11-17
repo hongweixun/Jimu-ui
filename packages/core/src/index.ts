@@ -43,6 +43,7 @@ import TreeSelect from './components/TreeSelect.vue'
 import Transfer from './components/Transfer.vue'
 import Table from './components/Table.vue'
 import LoadingBarHost from './components/LoadingBarHost.vue'
+import Scanner from './components/Scanner.vue'
 import Collapse from './components/Collapse.vue'
 import CollapseItem from './components/CollapseItem.vue'
 import Popup from './components/Popup.vue'
@@ -99,7 +100,7 @@ import Pagination from './components/Pagination.vue'
 import { setupAppearance } from './composables/useAppearance'
 import { vRipple } from './utils/ripple'
 
-export const version = '0.20.0'
+export const version = '0.21.0'
 
 export {
   Button,
@@ -193,6 +194,7 @@ export {
   Transfer,
   Table,
   LoadingBarHost,
+  Scanner,
 }
 
 export { showToast, closeToast, toastState } from './components/toast'
@@ -385,6 +387,7 @@ const components = [
   Transfer,
   Table,
   LoadingBarHost,
+  Scanner,
 ]
 
 /** 全量安装：app.use(JimuUI) */

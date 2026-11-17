@@ -39,6 +39,17 @@ const props = withDefaults(
     columns?: number
     /** 格子尺寸 */
     size?: number | string
+    /**
+     * 格子宽高比：'1:1'（默认正方形）、'3:4'（寸照）、'16:9'，
+     * 数字表示宽/高比（0.75 等价 '3:4'）；仅 grid 布局生效
+     */
+    ratio?: number | string
+    /** 布局：grid 九宫格 / list 附件列表（文字行：名称 + 状态 + 删除 + 计数） */
+    layout?: 'grid' | 'list'
+    /** 是否显示计数（已传/上限）；list 布局显示在标题行，grid 布局不渲染 */
+    showCount?: boolean
+    /** list 布局：计数文案前缀 */
+    countText?: string
     /** 圆角 */
     radius?: number | string
     /** 开启长按拖拽排序 */
@@ -69,6 +80,10 @@ const props = withDefaults(
     uploadText: '上传',
     columns: 4,
     size: 80,
+    ratio: '1:1',
+    layout: 'grid',
+    showCount: true,
+    countText: '已传',
     sortable: false,
     name: 'file',
     previewTeleport: true,
@@ -122,14 +137,37 @@ watch(
 
 const canAdd = computed(() => !disabled.value && !props.readonly && list.value.length < props.maxCount)
 
+const isList = computed(() => props.layout === 'list')
+
+/** ratio → CSS aspect-ratio：'3:4' → '3 / 4'，数字 → '0.75'（宽/高） */
+const ratioValue = computed(() => {
+  const v = props.ratio
+  if (typeof v === 'number') return Number.isFinite(v) && v > 0 ? String(v) : '1'
+  const m = /^([\d.]+)\s*[:/]\s*([\d.]+)$/.exec(String(v).trim())
+  if (m) return `${m[1]} / ${m[2]}`
+  return '1 / 1'
+})
+
 const gridStyle = computed(() => {
   const s: Record<string, string> = { '--jm-uploader-columns': String(props.columns) }
   const size = toCssSize(props.size)
   if (size) s['--jm-uploader-size'] = size
   const r = toCssSize(props.radius)
   if (r) s['--jm-uploader-radius'] = r
+  if (!isList.value) s['--jm-uploader-ratio'] = ratioValue.value
   return s
 })
+
+/** 附件大小文案：list 布局的第二行 */
+function sizeOf(item: string | UploaderFile): string {
+  const bytes = typeof item === 'object' && item?.size ? item.size : 0
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`
+}
+
+/** item 是否有可预览的图（有 url 就渲染缩略图，否则文件图标） */
 
 function urlOf(item: string | UploaderFile): string {
   return typeof item === 'string' ? item : (item.url ?? '')
@@ -590,7 +628,7 @@ onBeforeUnmount(() => {
   <div
     ref="root"
     class="jm-uploader"
-    :class="{ 'is-disabled': disabled, 'is-sortable': sortable }"
+    :class="{ 'is-disabled': disabled, 'is-sortable': sortable, 'is-list': isList }"
     :style="gridStyle"
   >
     <input
@@ -605,6 +643,80 @@ onBeforeUnmount(() => {
       @change="onChange"
     />
 
+    <!-- 附件列表布局：文字行（缩略小图/文件图标 + 名称 + 大小 + 状态 + 删除） -->
+    <template v-if="isList">
+      <div class="jm-uploader-list__head">
+        <button
+          v-if="canAdd"
+          type="button"
+          class="jm-uploader-list__add"
+          @click="openPicker"
+        >
+          <jm-icon name="upload" size="14" :stroke-width="2" />
+          <span>{{ uploadText }}</span>
+        </button>
+        <span
+          v-if="showCount"
+          class="jm-uploader-list__count"
+        >{{ countText }} {{ list.length }}/{{ maxCount }}</span>
+      </div>
+
+      <div
+        v-for="(item, i) in list"
+        :key="urlOf(item) || i"
+        class="jm-uploader-list__row"
+      >
+        <img
+          v-if="urlOf(item)"
+          class="jm-uploader-list__thumb"
+          :src="urlOf(item)"
+          :alt="nameOf(item, i)"
+          @click="onThumbClick(i)"
+        />
+        <span v-else class="jm-uploader-list__fileicon" aria-hidden="true">
+          <jm-icon name="file" size="18" :stroke-width="1.8" />
+        </span>
+
+        <div class="jm-uploader-list__meta">
+          <p class="jm-uploader-list__name">{{ nameOf(item, i) }}</p>
+          <p class="jm-uploader-list__sub">
+            <template v-if="statusOf(item) === 'uploading'">上传中 {{ percentOf(item) }}%</template>
+            <template v-else-if="statusOf(item) === 'pending'">{{ pendingText }}</template>
+            <template v-else-if="statusOf(item) === 'error'">{{ retryText }}</template>
+            <template v-else>{{ sizeOf(item) }}</template>
+          </p>
+          <div
+            v-if="statusOf(item) === 'uploading'"
+            class="jm-uploader-list__bar"
+            :style="{ '--jm-upload-p': `${percentOf(item)}%` }"
+            role="progressbar"
+            :aria-valuenow="percentOf(item)"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          />
+        </div>
+
+        <button
+          v-if="statusOf(item) === 'error' && !disabled && !readonly"
+          type="button"
+          class="jm-uploader-list__retry"
+          @click.stop="retry(i)"
+        >
+          {{ retryText }}
+        </button>
+        <button
+          v-if="deletable && !readonly && !disabled"
+          type="button"
+          class="jm-uploader-list__del"
+          @click="onDelete(i, $event)"
+        >
+          删除
+        </button>
+      </div>
+    </template>
+
+    <!-- 九宫格布局 -->
+    <template v-else>
     <div
       v-for="(item, i) in list"
       :key="urlOf(item) || i"
@@ -658,7 +770,7 @@ onBeforeUnmount(() => {
     </div>
 
     <button
-      v-if="canAdd"
+      v-if="canAdd && !isList"
       type="button"
       class="jm-uploader__trigger"
       :aria-label="uploadText"
@@ -669,6 +781,7 @@ onBeforeUnmount(() => {
         <span v-if="uploadText" class="jm-uploader__text">{{ uploadText }}</span>
       </slot>
     </button>
+    </template>
 
     <Popup
       v-model:show="showPreview"
@@ -696,7 +809,7 @@ onBeforeUnmount(() => {
 .jm-uploader__item,
 .jm-uploader__trigger {
   position: relative;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: var(--jm-uploader-ratio, 1 / 1);
   min-width: 0;
   border-radius: var(--jm-uploader-radius, var(--jm-radius-md));
   overflow: hidden;
@@ -870,5 +983,150 @@ onBeforeUnmount(() => {
   max-width: 80vw;
   max-height: 70vh;
   object-fit: contain;
+}
+
+/* ------------------------------------------------------------------ */
+/* list 布局：附件列表                                                  */
+/* ------------------------------------------------------------------ */
+
+.jm-uploader.is-list {
+  display: block;
+}
+
+.jm-uploader-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jm-space-2);
+}
+
+.jm-uploader-list__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 14px;
+  border: 1px dashed var(--jm-border-color, #c8ccD4);
+  border-radius: var(--jm-radius, 8px);
+  background: transparent;
+  color: var(--jm-color-primary-text);
+  font-family: inherit;
+  font-size: var(--jm-font-size-sm);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.jm-uploader-list__add:active {
+  opacity: 0.7;
+}
+
+.jm-uploader.is-disabled .jm-uploader-list__add {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.jm-uploader-list__count {
+  font-size: var(--jm-font-size-sm);
+  color: var(--jm-text-color-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.jm-uploader-list__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: var(--jm-radius, 8px);
+  background: var(--jm-bg-secondary, #f5f7fa);
+}
+
+.jm-uploader-list__thumb {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.jm-uploader-list__fileicon {
+  display: flex;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--jm-bg-container, #fff);
+  color: var(--jm-text-color-3);
+}
+
+.jm-uploader-list__meta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.jm-uploader-list__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--jm-font-size-md);
+  color: var(--jm-text-color);
+  line-height: 1.3;
+}
+
+.jm-uploader-list__sub {
+  margin-top: 2px;
+  font-size: var(--jm-font-size-sm);
+  color: var(--jm-text-color-4);
+  line-height: 1.3;
+}
+
+/* 行内细进度条 */
+.jm-uploader-list__bar {
+  position: relative;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--jm-border-color, #e5e7eb);
+}
+
+.jm-uploader-list__bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: var(--jm-upload-p, 0%);
+  border-radius: 2px;
+  background: var(--jm-color-primary);
+  transition: width 0.25s ease;
+}
+
+.jm-uploader-list__retry {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--jm-radius-round, 999px);
+  background: var(--jm-color-warning-bg, #fff7e6);
+  color: var(--jm-color-warning-text, #d46b08);
+  font-family: inherit;
+  font-size: var(--jm-font-size-sm);
+  cursor: pointer;
+}
+
+.jm-uploader-list__del {
+  flex: 0 0 auto;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--jm-text-color-3);
+  font-family: inherit;
+  font-size: var(--jm-font-size-sm);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.jm-uploader-list__del:active {
+  color: var(--jm-color-danger);
 }
 </style>

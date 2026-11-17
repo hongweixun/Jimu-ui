@@ -82,6 +82,7 @@ const components = {
     { text: 'Notify 消息通知', link: '/components/notify' },
     { text: 'Loading 加载', link: '/components/loading' },
     { text: 'LoadingBar 顶部加载条', link: '/components/loading-bar' },
+    { text: 'Scanner 扫描动效', link: '/components/scanner' },
     { text: 'Empty 空状态', link: '/components/empty' },
     { text: 'Result 结果页', link: '/components/result' },
     { text: 'Skeleton 骨架屏', link: '/components/skeleton' },

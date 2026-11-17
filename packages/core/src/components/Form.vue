@@ -25,8 +25,13 @@ const props = withDefaults(
     scrollToError?: boolean
     /** 整表禁用：内部所有表单控件（Input/Switch/Stepper 等）继承 */
     disabled?: boolean
+    /**
+     * 表单级校验时机（vant 的 validate-trigger）：只约束「未声明 trigger 的规则」。
+     * 默认 ['blur','change']（失焦与输入都校验）；只想要失焦校验传 ['blur']。
+     */
+    validateTrigger?: FormValidateTrigger[]
   }>(),
-  { showError: true, scrollToError: false, disabled: undefined },
+  { showError: true, scrollToError: false, disabled: undefined, validateTrigger: undefined },
 )
 
 const emit = defineEmits<{
@@ -40,6 +45,7 @@ const emit = defineEmits<{
 
 const showError = computed(() => props.showError)
 const isDisabled = computed(() => props.disabled === true)
+const validateTrigger = computed<FormValidateTrigger[]>(() => props.validateTrigger ?? ['blur', 'change'])
 
 /* 字段注册表：用数组保持挂载顺序，校验结果顺序与视觉顺序一致 */
 const fields: FormFieldHandle[] = []
@@ -65,6 +71,7 @@ provide<FormContext>(FORM_KEY, {
   },
   showError,
   disabled: isDisabled,
+  validateTrigger,
   registerField,
   unregisterField,
 })

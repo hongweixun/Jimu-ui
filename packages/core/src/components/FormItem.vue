@@ -107,6 +107,13 @@ const classes = computed(() => [
 
 /* ---------------- 校验 ---------------- */
 
+/**
+ * 校验代际号：blur 校验和 change 校验可能并发（输入中失焦、快速连续输入），
+ * 字段又可能挂异步 validator——迟到的旧结果不能覆盖新结果，
+ * 谁是最后一次发起的校验，谁才有资格写状态。
+ */
+let validateSeq = 0
+
 async function validate(trigger?: FormValidateTrigger): Promise<boolean> {
   if (!props.name || !form) {
     /* 没有 name 时不参与校验，外部手动指定 error-message 仍可展示 */
@@ -120,14 +127,20 @@ async function validate(trigger?: FormValidateTrigger): Promise<boolean> {
     return true
   }
 
-  let list = trigger ? all.filter((r) => ruleMatchesTrigger(r, trigger)) : all
+  let list = trigger
+    ? all.filter((r) => ruleMatchesTrigger(r, trigger, form?.validateTrigger.value ?? ['blur', 'change']))
+    : all
   /* 已处于错误态时，输入过程中用全量规则复检：用户改对了就立刻恢复，不用等失焦 */
   if (trigger === 'change' && innerState.value === 'error') list = all
   if (!list.length) return innerState.value !== 'error'
 
   const value = getValueByPath(form.model, props.name)
   const label = props.label || props.name
+  const seq = ++validateSeq
   const msg = await runRules(value, list, form.model, label)
+
+  /* 等待期间又发起了新的校验：本次结果已过期，丢弃，不写状态 */
+  if (seq !== validateSeq) return !msg
 
   innerMessage.value = msg
   innerState.value = msg ? 'error' : 'success'

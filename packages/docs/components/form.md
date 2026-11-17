@@ -52,7 +52,7 @@ description: 数据收集与校验，规则式校验、异步校验、提交与�
 | --- | --- |
 | `required` | 必填；纯空格默认也算空（`whitespace: true` 可放开） |
 | `message` | 失败文案，不传用内置中文提示 |
-| `trigger` | `'blur'` / `'change'` / 两者数组；不传则两种时机都校验 |
+| `trigger` | `'blur'` / `'change'` / 两者数组；不传则跟随表单级 `validate-trigger`（默认失焦与输入都校验） |
 | `type` | `string` `number` `integer` `boolean` `array` `email` `tel` `url` `date` |
 | `pattern` | 正则校验（`RegExp`） |
 | `min` / `max` / `len` | 字符串与数组看长度，数字看大小 |
@@ -78,6 +78,37 @@ const rules = {
   ],
 }
 ```
+
+## 自定义校验进阶
+
+`validator` 的三个参数是 `(value, rule, model)`——第三个参数给了整个表单数据，所以**跨字段校验**不用任何额外机制：确认密码直接和 `model.password` 比。
+
+<DemoBlock src="/demos/form/validate.vue" title="异步查重、密码强度、跨字段校验与校验时机切换" desc="用户名 700ms 异步查重；密码强度同步 validator；确认密码跨字段比对；顶部按钮切「仅失焦」后输入过程不再实时报错。" />
+
+四种典型写法：
+
+```ts
+// ① 同步自定义：返回 true 通过，字符串作为错误文案
+{ validator: (v) => (/[a-zA-Z]/.test(v) && /\d/.test(v) ? true : '密码须同时包含字母和数字') }
+
+// ② 异步：模拟查重，返回 Promise
+{ validator: (v) => checkRemote(v).then(taken => taken.includes(v) ? '该用户名已被注册' : true) }
+
+// ③ 跨字段：从 model 拿另一个字段
+{ validator: (v, _rule, m) => (v === m.password ? true : '两次输入的密码不一致') }
+
+// ④ 正则 + 自定义文案
+{ pattern: /^1\d{10}$/, message: '手机号应为 1 开头的 11 位数字' }
+```
+
+**校验时机**由两层控制，规则自己声明 `trigger` 时以声明为准：
+
+| 层级 | 配置 | 说明 |
+| --- | --- | --- |
+| 表单级 | `<jm-form :validate-trigger="['blur']">` | 只约束「未声明 trigger 的规则」；传 `['blur']` 即关闭输入过程实时校验 |
+| 规则级 | `{ trigger: 'blur' }` | 优先级高于表单级 |
+
+处于错误态的字段在输入过程中仍会**全量复检**——改对了立即恢复，不用等失焦。
 
 ## 提交与重置
 
@@ -140,6 +171,7 @@ formRef.value.resetFields()
 | show-error | 是否展示报错文案 | `boolean` | `true` |
 | scroll-to-error | 校验失败时滚动到第一个出错字段 | `boolean` | `false` |
 | disabled | 整表禁用，内部所有表单控件继承 | `boolean` | `false` |
+| validate-trigger | 表单级校验时机，只约束未声明 trigger 的规则 | `('blur' \| 'change')[]` | `['blur','change']` |
 
 ### Form Events
 
