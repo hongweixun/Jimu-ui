@@ -6,7 +6,7 @@ hero:
   text: 像搭积木一样写页面
   tagline: 金智安教育科技移动端组件库 · Vue 3 + TypeScript · 移动优先 · 支持日夜双肤与适老模式
   image:
-    src: ./logo.svg
+    src: /logo.svg
     alt: Jimu UI 标识——三块积木拼成的 J
   actions:
     - theme: brand

@@ -209,8 +209,9 @@ const classes = computed(() => [
   border-bottom-right-radius: 6px;
 }
 
-/* 扫描线：亮线本体 + 上方渐变拖尾；容器铺满视口做位移，height:100% 让
-   translateY(calc(100%)) 正确落到容器底部（transform 百分比参照自身） */
+/* 扫描线：亮线本体画在容器顶部 + 下方 44px 渐变拖尾；容器铺满视口做位移，
+   translateY(calc(100% - 2px)) 把亮线推到视口底部——线从顶扫到底再折返。
+   注意亮线必须锚定 top：锚 bottom 的话 span 被推出视口后线会被 overflow 裁掉 */
 .jm-scanner__line {
   position: absolute;
   top: 0;
@@ -225,7 +226,7 @@ const classes = computed(() => [
 .jm-scanner__line::before {
   content: '';
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 6%;
   right: 6%;
   height: var(--jm-scanner-line-width, 2px);
@@ -234,10 +235,11 @@ const classes = computed(() => [
   box-shadow: 0 0 12px var(--jm-scanner-line-color, var(--jm-color-primary, #00a0e9));
 }
 
+/* 拖尾在亮线上方（线向下扫，拖尾在身后）：远端透明、贴线处着色 */
 .jm-scanner__line::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  top: -44px;
   left: 6%;
   right: 6%;
   height: 44px;

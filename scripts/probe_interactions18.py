@@ -302,6 +302,8 @@ check("uploader", "delete tip updated",
 
 # ================= Scanner 扫描动效 =================
 print("== scanner ==")
+# 探针机器系统开了「减少动效」，模拟正常偏好再测动画
+tab.send("Emulation.setEmulatedMedia", {"features": [{"name": "prefers-reduced-motion", "value": "no-preference"}]})
 goto("/components/scanner")
 wait_for("document.querySelectorAll('.jm-scanner').length >= 2")
 time.sleep(1.5)
