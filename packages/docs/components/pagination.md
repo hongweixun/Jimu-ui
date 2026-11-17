@@ -1,6 +1,6 @@
 ---
 title: Pagination 分页
-description: 移动端分页器，支持页码折叠、简单模式与禁用态。
+description: 移动端分页器，悬浮卡片式页码条、页码折叠、简单模式、条数切换与快速跳转。
 ---
 
 # Pagination 分页
@@ -13,10 +13,12 @@ description: 移动端分页器，支持页码折叠、简单模式与禁用态�
 
 ## 基础用法
 
-<DemoBlock src="/demos/pagination/basic.vue" title="基础、多页码、简单模式" desc="总页数由 total 与 pageSize 推导，也可直接传 pageCount。" />
+普通模式是一条**悬浮卡片式页码条**：白色底 + 浅阴影，当前页为主色实底圆角块。配合 `show-size-changer` 可以切换每页条数：
+
+<DemoBlock src="/demos/pagination/basic.vue" title="基础、总数、简单模式、快速跳转" desc="总页数由 total 与 pageSize 推导，也可直接传 pageCount；current 与 pageSize 双向绑定，change 事件返回 (page, size)。" />
 
 ```vue
-<jm-pagination v-model="page" :total="96" :page-size="10" />
+<jm-pagination v-model="page" v-model:page-size="size" :total="96" show-size-changer />
 ```
 
 ## 页码折叠
@@ -31,30 +33,29 @@ description: 移动端分页器，支持页码折叠、简单模式与禁用态�
 
 省略号本身是**可点的按钮**：点前半段往前跳一屏，点后半段往后跳一屏——省掉「一格一格点」的麻烦。
 
+## 总数与快速跳转
+
+`total` 插槽显示数据总量和当前范围；`show-quick-jumper` 显示「跳至 N 页」输入框，输入越界页码会红字提示：
+
+```vue
+<jm-pagination v-model="page" :total="96" show-quick-jumper>
+  <template #total="{ total, range }">
+    共 {{ total }} 条，当前 {{ range[0] }}-{{ range[1] }} 条
+  </template>
+</jm-pagination>
+```
+
 ## 简单模式
 
-只保留「上一页 / 当前页 共 N 页 / 下一页」，适合空间紧张或页码意义不大的场景：
+只保留「箭头 / 当前页 共 N 页 / 箭头」，适合空间紧张或页码意义不大的场景：
 
 ```vue
 <jm-pagination v-model="page" simple :total="96" :page-size="10" />
 ```
 
-## 只显示箭头
-
-`icon-only` 去掉「上一页 / 下一页」文字。
-
 ## 窄容器自适应
 
-组件自身是 CSS 容器，宽度不够时**分级压缩**，尽量保住箭头文字：
-
-| 容器宽度 | 行为 |
-| --- | --- |
-| > 400px | 完整样式 |
-| ≤ 400px | 收紧页码与间距（文字保留） |
-| ≤ 340px | 页码进一步收窄（文字保留） |
-| ≤ 300px | 空间实在不够，才收起「上一页 / 下一页」文字只留箭头 |
-
-宽度跟着组件自身走而不是视口——放进手机模拟框、侧栏、半屏弹层等窄容器里也会正确分级；不会出现文字与页码重叠。
+组件自身是 CSS 容器，宽度不够时**分级压缩**：先收紧间距，再缩小页码，≤300px 才收起「上一页 / 下一页」文字只留箭头。宽度跟着组件自身走而不是视口——放进手机模拟框、侧栏、半屏弹层等窄容器里也会正确分级；不会出现文字与页码重叠。
 
 ## 参数怎么给
 
@@ -64,7 +65,7 @@ description: 移动端分页器，支持页码折叠、简单模式与禁用态�
 | 只有总页数 | `pageCount` |
 | 服务端已算好页数 | `pageCount`，`total` 不用传 |
 
-`pageCount` 优先级高于 `total`；两者都不传时按 1 页处理。
+`pageCount` 优先级高于 `total`；两者都不传时按 1 页处理。传了 `pageCount` 时每页条数切换器不显示（页数固定）。
 
 ## API
 
@@ -74,7 +75,7 @@ description: 移动端分页器，支持页码折叠、简单模式与禁用态�
 | --- | --- | --- | --- |
 | modelValue | 当前页（`v-model`） | `number` | `1` |
 | total | 总条数 | `number` | `0` |
-| pageSize | 每页条数 | `number` | `10` |
+| pageSize | 每页条数（`v-model:page-size`） | `number` | `10` |
 | pageCount | 总页数，优先于 total | `number` | - |
 | simple | 简单模式 | `boolean` | `false` |
 | pagerCount | 数字页码最多几个 | `number` | `5` |
@@ -83,20 +84,21 @@ description: 移动端分页器，支持页码折叠、简单模式与禁用态�
 | prevText | 上一页文字 | `string` | `'上一页'` |
 | nextText | 下一页文字 | `string` | `'下一页'` |
 | hideOnSinglePage | 只有一页时整体隐藏 | `boolean` | `false` |
+| showSizeChanger | 显示每页条数切换器 | `boolean` | `false` |
+| sizeOption | 每页条数可选项 | `number[]` | `[10, 20, 50, 100]` |
+| showQuickJumper | 显示快速跳转输入框（普通模式） | `boolean` | `false` |
 
 ### Events
 
 | 事件 | 说明 | 参数 |
 | --- | --- | --- |
-| update:modelValue | 页码变化 | `number` |
-| change | 同上 | `number` |
+| update:modelValue | 页码变化 | `(page: number)` |
+| update:pageSize | 每页条数变化 | `(size: number)` |
+| change | 页码或条数变化 | `(page: number, size: number)` |
 
 ### 插槽
 
-默认插槽放在最右侧，可加「共 96 条」这类统计文案：
-
-```vue
-<jm-pagination v-model="page" :total="96">
-  <span class="total">共 96 条</span>
-</jm-pagination>
-```
+| 名称 | 说明 | 参数 |
+| --- | --- | --- |
+| total | 总数与当前范围文案 | `{ total: number, range: [number, number] }` |
+| 默认 | 追加在分页条尾部 | - |

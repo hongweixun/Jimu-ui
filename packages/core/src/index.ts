@@ -99,11 +99,14 @@ import CheckTag from './components/CheckTag.vue'
 import Pagination from './components/Pagination.vue'
 import Ellipsis from './components/Ellipsis.vue'
 import Video from './components/Video.vue'
+import Drag from './components/Drag.vue'
+import QRCode from './components/QRCode.vue'
+import Guide from './components/Guide.vue'
 
 import { setupAppearance } from './composables/useAppearance'
 import { vRipple } from './utils/ripple'
 
-export const version = '0.24.1'
+export const version = '0.25.0'
 
 export {
   Button,
@@ -183,6 +186,9 @@ export {
   BackTop,
   CheckTag,
   Pagination,
+  Drag,
+  QRCode,
+  Guide,
   Ellipsis,
   Video,
   Timeline,
@@ -204,11 +210,13 @@ export {
 }
 
 export { showToast, closeToast, toastState } from './components/toast'
+export { showSnackbar, clearSnackbar, snackbarState } from './components/snackbar'
 export { showNotify, closeNotify, notifyState } from './components/notify'
 export type { NotifyOptions, NotifyType, NotifyItem } from './components/notify'
 export { showImagePreview, closeImagePreview, imagePreviewState } from './components/image-preview'
 export type { ImagePreviewOptions } from './components/image-preview'
 export type { ToastOptions, ToastType, ToastPosition } from './components/toast'
+export type { SnackbarOptions, SnackbarType, SnackbarPosition, SnackbarHandle } from './components/snackbar'
 export { showLoadingBar, hideLoadingBar, loadingBarState } from './components/loading-bar'
 export type { LoadingBarOptions, LoadingBarController } from './components/loading-bar'
 
@@ -379,6 +387,9 @@ const components = [
   BackTop,
   CheckTag,
   Pagination,
+  Drag,
+  QRCode,
+  Guide,
   Ellipsis,
   Video,
   Timeline,

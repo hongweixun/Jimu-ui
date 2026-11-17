@@ -164,6 +164,8 @@ const days = computed<CalendarDay[]>(() => {
     }
     if (sameDay(date, today)) {
       base.today = true
+      // 对齐 TDesign：今天默认在日期下方标「今」，formatter 可覆盖
+      base.bottomInfo = '今'
     }
 
     const patched = props.formatter ? props.formatter({ ...base }) : undefined
@@ -814,6 +816,13 @@ button.jm-calendar__month {
 
 .jm-calendar__day.is-selected .jm-calendar__day-info {
   color: var(--jm-calendar-color, var(--jm-color-primary));
+}
+
+/* 选中格压在实心底上的「今」字要反色，否则主色字贴主色底看不清 */
+.jm-calendar__day.is-selected.is-today .jm-calendar__day-info,
+.jm-calendar__day.is-range-start.is-today .jm-calendar__day-info,
+.jm-calendar__day.is-range-end.is-today .jm-calendar__day-info {
+  color: var(--jm-color-primary-contrast);
 }
 
 /* ---------- 方形（TDesign 风格）：整格色块，起止只圆外侧 ---------- */

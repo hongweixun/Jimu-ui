@@ -125,14 +125,17 @@ function clampToViewport() {
   const el = panelRef.value
   const host = root.value
   if (!el || !host || typeof document === 'undefined') return
-  /* 用 offset* 布局值而不是 getBoundingClientRect：
-     进场动画的 scale transform 还在跑时 rect 会被缩小，布局值不受影响 */
-  const rr = host.getBoundingClientRect()
-  const left = rr.left + el.offsetLeft
-  const top = rr.top + el.offsetTop
-  const right = left + el.offsetWidth
-  const bottom = top + el.offsetHeight
   if (!el.offsetWidth && !el.offsetHeight) return
+  /* 用 getBoundingClientRect 拿真实视觉位置（含 translateX(-50%) 等定位 transform），
+     但进场动画的 scale 会污染 rect——临时禁用动画测完再恢复 */
+  const prevAnim = el.style.animation
+  el.style.animation = 'none'
+  const r = el.getBoundingClientRect()
+  el.style.animation = prevAnim
+  const left = r.left
+  const top = r.top
+  const right = r.right
+  const bottom = r.bottom
   /* 可用区域 = 视口 ∩ 最近的滚动/裁剪容器（手机模拟框、弹层内部等场景），
      没有裁剪容器时就是视口本身 */
   const vw = document.documentElement.clientWidth
@@ -158,8 +161,10 @@ function clampToViewport() {
     node = node.parentElement
   }
   if (boxR - boxL < 40 || boxB - boxT < 40) return /* 裁剪容器过小，回移没有意义 */
-  shiftX.value = left < boxL ? boxL - left : right > boxR ? boxR - right : 0
-  shiftY.value = top < boxT ? boxT - top : bottom > boxB ? boxB - bottom : 0
+  /* 增量累加而不是绝对覆盖：测量值已包含之前应用的 margin，
+     直接赋绝对值会在复测时把上一次的偏移抵消掉 */
+  shiftX.value += Math.round(left < boxL ? boxL - left : right > boxR ? boxR - right : 0)
+  shiftY.value += Math.round(top < boxT ? boxT - top : bottom > boxB ? boxB - bottom : 0)
 }
 
 watch(
@@ -170,7 +175,12 @@ watch(
       /* 先归零再测，避免上一次的偏移量污染这次的测量结果 */
       shiftX.value = 0
       shiftY.value = 0
-      nextTick(() => requestAnimationFrame(clampToViewport))
+      nextTick(() => {
+        requestAnimationFrame(clampToViewport)
+        /* 字体异步加载会改变面板宽度（translateX(-50%) 随之漂移），
+           动画结束后再复测一次；公式是绝对修正，重复执行幂等 */
+        setTimeout(clampToViewport, 250)
+      })
     } else {
       shiftX.value = 0
       shiftY.value = 0

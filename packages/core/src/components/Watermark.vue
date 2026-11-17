@@ -52,6 +52,7 @@ function lines(): string[] {
 
 /** 用 canvas 生成一块「单元格」，再交给 background-repeat 平铺 */
 function render() {
+  if (typeof document === 'undefined') return
   const rows = lines()
   if (!rows.length && !props.image) {
     tile.value = ''

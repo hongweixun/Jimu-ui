@@ -106,3 +106,17 @@
   padding-left: var(--jm-safe-left, 0px);
   padding-right: var(--jm-safe-right, 0px);
 }
+
+/* ---------------- 海拔（Elevation）工具类 ----------------
+   变量 --jm-elevation-0/1/2/3/4/6/8/12/16/24 定义在 @jimu/tokens，
+   暗色主题自动换为更重的纯黑阴影；用法 <div class="jm-elevation-2"> */
+.jm-elevation-0 { box-shadow: var(--jm-elevation-0); }
+.jm-elevation-1 { box-shadow: var(--jm-elevation-1); }
+.jm-elevation-2 { box-shadow: var(--jm-elevation-2); }
+.jm-elevation-3 { box-shadow: var(--jm-elevation-3); }
+.jm-elevation-4 { box-shadow: var(--jm-elevation-4); }
+.jm-elevation-6 { box-shadow: var(--jm-elevation-6); }
+.jm-elevation-8 { box-shadow: var(--jm-elevation-8); }
+.jm-elevation-12 { box-shadow: var(--jm-elevation-12); }
+.jm-elevation-16 { box-shadow: var(--jm-elevation-16); }
+.jm-elevation-24 { box-shadow: var(--jm-elevation-24); }

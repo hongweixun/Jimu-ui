@@ -92,6 +92,7 @@ function onEsc(e: KeyboardEvent) {
 watch(
   () => props.show,
   (v) => {
+    if (typeof document === 'undefined') return
     if (v) {
       zIndex.value = Math.max(zIndex.value, props.zIndex, nextZIndex())
       if (props.closeOnEsc) document.addEventListener('keydown', onEsc, true)

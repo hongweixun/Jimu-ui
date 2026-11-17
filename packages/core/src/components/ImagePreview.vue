@@ -89,7 +89,8 @@ const inline = computed(() => props.teleport === false)
 
 const target = computed<string | Element>(() => {
   if (typeof props.teleport === 'string') return props.teleport
-  if (props.teleport instanceof Element) return props.teleport
+  /* SSR（Node）下没有 Element 全局，直接 instanceof 会抛 ReferenceError */
+  if (typeof Element !== 'undefined' && props.teleport instanceof Element) return props.teleport
   return 'body'
 })
 
@@ -164,6 +165,7 @@ function onKeydown(e: KeyboardEvent) {
 watch(
   () => props.show,
   (v) => {
+    if (typeof document === 'undefined') return
     syncLock(!!v)
     if (!v) {
       document.removeEventListener('keydown', onKeydown, true)
