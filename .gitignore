@@ -11,3 +11,4 @@ Thumbs.db
 
 # WorkBuddy 会话数据（工作日志/临时探针/截图），不入库
 .workbuddy/
+.vitepress/cache/
