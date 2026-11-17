@@ -82,3 +82,26 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
+
+/* ---------------- iOS 安全区工具类 ----------------
+   依赖 viewport-fit=cover（页面 meta 已内置）；刘海屏/Home Indicator
+   场景下 env() 返回实际 inset，其余环境为 0 */
+.jm-safe-bottom {
+  height: var(--jm-safe-bottom, 0px);
+  pointer-events: none;
+}
+
+.jm-safe-top {
+  height: var(--jm-safe-top, 0px);
+  pointer-events: none;
+}
+
+/* 给 fixed 底部元素补内边距 */
+.jm-safe-pad-bottom {
+  padding-bottom: var(--jm-safe-bottom, 0px);
+}
+
+.jm-safe-pad-x {
+  padding-left: var(--jm-safe-left, 0px);
+  padding-right: var(--jm-safe-right, 0px);
+}

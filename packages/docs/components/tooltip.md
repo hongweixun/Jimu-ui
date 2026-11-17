@@ -37,7 +37,7 @@ Tooltip 和 [Popover](/components/popover) 长得像，但用途完全不同：
 | `trigger` | 行为 | 适合 |
 | --- | --- | --- |
 | `hover`（默认） | 鼠标移入延迟 `show-delay`（120ms）出现，移出 60ms 后消失；键盘聚焦时立即出现 | 桌面端、文档、后台 |
-| `longpress` | 长按 `longpress-duration`（450ms）出现，抬手后 `auto-hide-delay`（1.6s）自动消失；手指移动超过 8px 视为滚动，取消 | 移动端 |
+| `longpress` | 长按 `longpress-duration`（450ms）出现，抬手后 `auto-hide-delay`（1.6s）自动消失；移动超 8px 视为滚动取消。**移动端用 touch 事件、PC 用鼠标按住**（应用打开在 PC 浏览器也能长按），两边自动适配不双触发 | 移动端 / PC |
 | `click` | 点一下开、再点一下关 | 触屏与鼠标混用、需要停留阅读 |
 
 用 `hover` 时最好也检查移动端：手机浏览器会把第一次点击当成 hover，导致「点一下只出现气泡、没触发按钮」的错觉。移动端项目建议统一改成 `longpress`。

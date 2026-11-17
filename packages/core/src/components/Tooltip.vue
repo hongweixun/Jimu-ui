@@ -174,6 +174,28 @@ function onTouchStart(e: TouchEvent) {
   }, props.longpressDuration)
 }
 
+/* PC 鼠标长按：pointerType 门控为 mouse，避免触屏上与 touch 事件双触发 */
+function onMousePress(e: PointerEvent) {
+  if (props.trigger !== 'longpress' || props.disabled) return
+  if (e.pointerType !== 'mouse') return
+  startX = e.clientX
+  startY = e.clientY
+  clearTimers()
+  pressTimer = window.setTimeout(() => {
+    pressTimer = 0
+    visible.value = true
+  }, props.longpressDuration)
+}
+
+function onMousePressMove(e: PointerEvent) {
+  if (props.trigger !== 'longpress' || !pressTimer) return
+  if (e.pointerType !== 'mouse') return
+  if (Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) {
+    window.clearTimeout(pressTimer)
+    pressTimer = 0
+  }
+}
+
 function onTouchMove(e: TouchEvent) {
   if (props.trigger !== 'longpress' || !pressTimer) return
   const t = e.touches[0]
@@ -282,6 +304,10 @@ defineExpose({
     @touchmove="onTouchMove"
     @touchend="onTouchEnd"
     @touchcancel="onTouchEnd"
+    @pointerdown="onMousePress"
+    @pointermove="onMousePressMove"
+    @pointerup="onTouchEnd"
+    @pointercancel="onTouchEnd"
   >
     <slot />
 

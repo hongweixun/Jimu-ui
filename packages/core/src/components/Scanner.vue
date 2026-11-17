@@ -227,15 +227,23 @@ const classes = computed(() => [
   content: '';
   position: absolute;
   top: 0;
-  left: 6%;
-  right: 6%;
+  left: 0;
+  right: 0;
   height: var(--jm-scanner-line-width, 2px);
   border-radius: 999px;
-  background: var(--jm-scanner-line-color, var(--jm-color-primary, #00a0e9));
-  box-shadow: 0 0 12px var(--jm-scanner-line-color, var(--jm-color-primary, #00a0e9));
+  /* 两端渐隐渐细：水平渐变到透明，配合 drop-shadow 光晕随形状衰减 */
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--jm-scanner-line-color, var(--jm-color-primary, #00a0e9)) 14%,
+    var(--jm-scanner-line-color, var(--jm-color-primary, #00a0e9)) 86%,
+    transparent
+  );
+  filter: drop-shadow(0 0 8px var(--jm-scanner-line-color, var(--jm-color-primary, #00a0e9)));
 }
 
-/* 拖尾在亮线上方（线向下扫，拖尾在身后）：远端透明、贴线处着色 */
+/* 拖尾跟随运动方向：下扫时在亮线上方，上扫时翻到下方（49.9% 处切换）。
+   gradient 方向同步翻转，保证贴线一侧始终着色、远端透明 */
 .jm-scanner__line::after {
   content: '';
   position: absolute;
@@ -255,6 +263,10 @@ const classes = computed(() => [
   animation: jm-scanner-sweep var(--jm-scanner-duration, 1800ms) ease-in-out infinite;
 }
 
+.jm-scanner.is-active .jm-scanner__line::after {
+  animation: jm-scanner-tail var(--jm-scanner-duration, 1800ms) ease-in-out infinite;
+}
+
 @keyframes jm-scanner-sweep {
   0% {
     transform: translateY(0);
@@ -264,6 +276,29 @@ const classes = computed(() => [
   }
   100% {
     transform: translateY(0);
+  }
+}
+
+@keyframes jm-scanner-tail {
+  0%,
+  49.9% {
+    /* 上方：贴线一侧是底部，向下着色渐隐到上端 */
+    transform: translateY(0);
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      color-mix(in srgb, var(--jm-scanner-line-color, var(--jm-color-primary, #00a0e9)) 18%, transparent)
+    );
+  }
+  50%,
+  100% {
+    /* 翻到下方：贴线一侧是顶部 */
+    transform: translateY(46px);
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--jm-scanner-line-color, var(--jm-color-primary, #00a0e9)) 18%, transparent),
+      transparent
+    );
   }
 }
 

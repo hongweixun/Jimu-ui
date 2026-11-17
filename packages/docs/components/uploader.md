@@ -95,6 +95,12 @@ async function upload(file, { onProgress }) {
 
 <DemoBlock src="/demos/uploader/layout.vue" title="三种形态平铺对比（不在手机框内）" desc="寸照 3:4、横图 16:9、附件列表——同一格子系统，比例与布局随内容走。" :phone="false" />
 
+## 通栏上传布局
+
+`layout="banner"` 渲染一个**铺满整宽的触发卡**：居中的图标圆 + 主标题 + 副标题（格式提示），已传文件以附件文字行展示在卡下方。适合"一次传一张证书 / 证件照"这类表单场景，比九宫格更聚焦、比按钮更醒目。
+
+<DemoBlock src="/demos/uploader/banner.vue" title="通栏上传卡" desc="标题 + 副标题可配（banner-title / banner-desc），支持 #banner 插槽整体自定义；右上角自动显示已传计数。" />
+
 ## API
 
 ### Props
@@ -118,8 +124,11 @@ async function upload(file, { onProgress }) {
 | columns | 每行列数（grid 布局） | `number` | `4` |
 | size | 格子尺寸（grid 布局） | `number \| string` | `80` |
 | ratio | 格子宽高比：`'1:1'` / `'3:4'` / `'16:9'` / 数字（宽/高） | `number \| string` | `'1:1'` |
-| layout | 布局 `'grid'` 九宫格 / `'list'` 附件列表 | `string` | `'grid'` |
-| show-count | 显示计数（list 布局标题行） | `boolean` | `true` |
+| layout | 布局 `'grid'` 九宫格 / `'list'` 附件列表 / `'banner'` 通栏触发卡 | `string` | `'grid'` |
+| banner-title | banner 布局触发卡主标题 | `string` | `'上传图片'` |
+| banner-desc | banner 布局触发卡副标题（格式提示），空则不渲染 | `string` | — |
+| banner-icon | banner 布局触发卡图标名 | `string` | `'camera'` |
+| show-count | 显示计数（list 标题行 / banner 右上角） | `boolean` | `true` |
 | count-text | 计数文案前缀 | `string` | `'已传'` |
 | radius | 格子圆角 | `number \| string` | `var(--jm-radius-md)` |
 | sortable | 开启长按拖拽排序（仅 grid） | `boolean` | `false` |

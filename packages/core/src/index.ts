@@ -44,6 +44,7 @@ import Transfer from './components/Transfer.vue'
 import Table from './components/Table.vue'
 import LoadingBarHost from './components/LoadingBarHost.vue'
 import Scanner from './components/Scanner.vue'
+import SafeBottom from './components/SafeBottom.vue'
 import Collapse from './components/Collapse.vue'
 import CollapseItem from './components/CollapseItem.vue'
 import Popup from './components/Popup.vue'
@@ -100,7 +101,7 @@ import Pagination from './components/Pagination.vue'
 import { setupAppearance } from './composables/useAppearance'
 import { vRipple } from './utils/ripple'
 
-export const version = '0.21.0'
+export const version = '0.22.0'
 
 export {
   Button,
@@ -195,6 +196,7 @@ export {
   Table,
   LoadingBarHost,
   Scanner,
+  SafeBottom,
 }
 
 export { showToast, closeToast, toastState } from './components/toast'
@@ -388,6 +390,7 @@ const components = [
   Table,
   LoadingBarHost,
   Scanner,
+  SafeBottom,
 ]
 
 /** 全量安装：app.use(JimuUI) */

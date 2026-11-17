@@ -44,8 +44,14 @@ const props = withDefaults(
      * 数字表示宽/高比（0.75 等价 '3:4'）；仅 grid 布局生效
      */
     ratio?: number | string
-    /** 布局：grid 九宫格 / list 附件列表（文字行：名称 + 状态 + 删除 + 计数） */
-    layout?: 'grid' | 'list'
+    /** 布局：grid 九宫格 / list 附件列表（文字行）/ banner 通栏（整宽触发卡 + 文字行） */
+    layout?: 'grid' | 'list' | 'banner'
+    /** banner 布局：触发卡主标题 */
+    bannerTitle?: string
+    /** banner 布局：触发卡副标题（格式提示），空则不渲染 */
+    bannerDesc?: string
+    /** banner 布局：触发卡图标名 */
+    bannerIcon?: string
     /** 是否显示计数（已传/上限）；list 布局显示在标题行，grid 布局不渲染 */
     showCount?: boolean
     /** list 布局：计数文案前缀 */
@@ -82,6 +88,9 @@ const props = withDefaults(
     size: 80,
     ratio: '1:1',
     layout: 'grid',
+    bannerTitle: '上传图片',
+    bannerDesc: '',
+    bannerIcon: 'camera',
     showCount: true,
     countText: '已传',
     sortable: false,
@@ -138,6 +147,8 @@ watch(
 const canAdd = computed(() => !disabled.value && !props.readonly && list.value.length < props.maxCount)
 
 const isList = computed(() => props.layout === 'list')
+const isBanner = computed(() => props.layout === 'banner')
+const isRowLayout = computed(() => isList.value || isBanner.value)
 
 /** ratio → CSS aspect-ratio：'3:4' → '3 / 4'，数字 → '0.75'（宽/高） */
 const ratioValue = computed(() => {
@@ -154,7 +165,7 @@ const gridStyle = computed(() => {
   if (size) s['--jm-uploader-size'] = size
   const r = toCssSize(props.radius)
   if (r) s['--jm-uploader-radius'] = r
-  if (!isList.value) s['--jm-uploader-ratio'] = ratioValue.value
+  if (!isRowLayout.value) s['--jm-uploader-ratio'] = ratioValue.value
   return s
 })
 
@@ -628,7 +639,7 @@ onBeforeUnmount(() => {
   <div
     ref="root"
     class="jm-uploader"
-    :class="{ 'is-disabled': disabled, 'is-sortable': sortable, 'is-list': isList }"
+    :class="{ 'is-disabled': disabled, 'is-sortable': sortable, 'is-list': isRowLayout, 'is-banner': isBanner }"
     :style="gridStyle"
   >
     <input
@@ -643,9 +654,29 @@ onBeforeUnmount(() => {
       @change="onChange"
     />
 
-    <!-- 附件列表布局：文字行（缩略小图/文件图标 + 名称 + 大小 + 状态 + 删除） -->
-    <template v-if="isList">
-      <div class="jm-uploader-list__head">
+    <!-- 附件行布局（list / banner）：文字行（缩略小图/文件图标 + 名称 + 大小 + 状态 + 删除） -->
+    <template v-if="isRowLayout">
+      <!-- banner 通栏触发卡：整宽、居中图标 + 标题 + 副标题 -->
+      <button
+        v-if="isBanner && canAdd"
+        type="button"
+        class="jm-uploader-banner"
+        @click="openPicker"
+      >
+        <slot name="banner">
+          <span class="jm-uploader-banner__icon" aria-hidden="true">
+            <jm-icon :name="bannerIcon" size="22" :stroke-width="1.8" />
+          </span>
+          <span class="jm-uploader-banner__title">{{ bannerTitle }}</span>
+          <span v-if="bannerDesc" class="jm-uploader-banner__desc">{{ bannerDesc }}</span>
+        </slot>
+        <span
+          v-if="showCount && list.length"
+          class="jm-uploader-banner__count"
+        >{{ countText }} {{ list.length }}/{{ maxCount }}</span>
+      </button>
+
+      <div v-else-if="isList" class="jm-uploader-list__head">
         <button
           v-if="canAdd"
           type="button"
@@ -770,7 +801,7 @@ onBeforeUnmount(() => {
     </div>
 
     <button
-      v-if="canAdd && !isList"
+      v-if="canAdd && !isRowLayout"
       type="button"
       class="jm-uploader__trigger"
       :aria-label="uploadText"
@@ -986,6 +1017,68 @@ onBeforeUnmount(() => {
 }
 
 /* ------------------------------------------------------------------ */
+/* banner 通栏布局：整宽触发卡 + 附件文字行                              */
+/* ------------------------------------------------------------------ */
+
+.jm-uploader-banner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 28px 16px;
+  border: 1px dashed var(--jm-border-color, #c8ccd4);
+  border-radius: var(--jm-uploader-radius, var(--jm-radius-md));
+  background: var(--jm-fill-color-light, #f7f8fa);
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease;
+}
+
+.jm-uploader-banner:active {
+  background: var(--jm-fill-color, #f2f3f5);
+}
+
+.jm-uploader.is-disabled .jm-uploader-banner {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.jm-uploader-banner__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--jm-color-primary-light, rgba(0, 160, 233, 0.1));
+  color: var(--jm-color-primary, #00a0e9);
+}
+
+.jm-uploader-banner__title {
+  color: var(--jm-text-color, #323233);
+  font-size: var(--jm-font-size-md);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.jm-uploader-banner__desc {
+  color: var(--jm-text-color-2, #969799);
+  font-size: var(--jm-font-size-sm);
+  line-height: 1.4;
+}
+
+.jm-uploader-banner__count {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  color: var(--jm-text-color-3, #c8c9cc);
+  font-size: var(--jm-font-size-xs);
+}
+
 /* list 布局：附件列表                                                  */
 /* ------------------------------------------------------------------ */
 

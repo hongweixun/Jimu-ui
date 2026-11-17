@@ -98,6 +98,7 @@ const components = {
     { text: 'Copy 复制指令', link: '/components/copy' },
     { text: 'Lazy 懒加载指令', link: '/components/lazy' },
     { text: '组合式函数', link: '/components/composables' },
+    { text: 'SafeBottom 安全区占位', link: '/components/safe-area' },
   ],
 }
 
