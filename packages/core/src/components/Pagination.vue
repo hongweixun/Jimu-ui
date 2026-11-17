@@ -294,9 +294,46 @@ function onToken(token: Token) {
   transition: none;
 }
 
-/* ---------- 窄容器：页面多时把箭头文字收起来，只留箭头 ---------- */
-/* 容器查询：跟着组件自身宽度走（模拟框/侧栏/半屏弹层里也正确） */
-@container (max-width: 420px) {
+/* ---------- 窄容器：分级压缩 ---------- */
+/* ① ≤400px：先缩页码与间距，上一页/下一页文字保留 */
+@container (max-width: 400px) {
+  .jm-pagination {
+    gap: 4px;
+  }
+
+  .jm-pagination button {
+    padding: 0 4px;
+  }
+
+  .jm-pagination__pages {
+    gap: 0;
+  }
+
+  .jm-pagination__page {
+    min-width: 26px;
+    padding: 0 1px;
+  }
+
+  .jm-pagination__more {
+    width: 26px;
+    padding: 0;
+  }
+}
+
+/* ② ≤340px：进一步缩页码，上一页/下一页文字仍然保留 */
+@container (max-width: 340px) {
+  .jm-pagination__page {
+    min-width: 22px;
+    padding: 0;
+  }
+
+  .jm-pagination__more {
+    width: 22px;
+  }
+}
+
+/* ③ ≤300px：空间实在不够才把箭头文字收起来，只留箭头 */
+@container (max-width: 300px) {
   .jm-pagination__prev span,
   .jm-pagination__next span {
     display: none;
@@ -306,28 +343,42 @@ function onToken(token: Token) {
   .jm-pagination__next {
     padding: 0 6px;
   }
-
-  .jm-pagination {
-    gap: 6px;
-  }
-
-  .jm-pagination__pages {
-    gap: 0;
-  }
-
-  .jm-pagination__page {
-    min-width: 28px;
-    padding: 0 2px;
-  }
-
-  .jm-pagination__more {
-    width: 26px;
-  }
 }
 
-/* 旧浏览器兜底：按视口宽度收窄（与容器查询规则一致，不冲突） */
+/* 旧浏览器兜底：按视口宽度分级（与容器查询规则一致，不冲突） */
 @supports not (container-type: inline-size) {
-  @media (max-width: 420px) {
+  @media (max-width: 400px) {
+    .jm-pagination {
+      gap: 4px;
+    }
+
+    .jm-pagination button {
+      padding: 0 4px;
+    }
+
+    .jm-pagination__page {
+      min-width: 26px;
+      padding: 0 1px;
+    }
+
+    .jm-pagination__more {
+      width: 26px;
+      padding: 0;
+    }
+  }
+
+  @media (max-width: 340px) {
+    .jm-pagination__page {
+      min-width: 22px;
+      padding: 0;
+    }
+
+    .jm-pagination__more {
+      width: 22px;
+    }
+  }
+
+  @media (max-width: 300px) {
     .jm-pagination__prev span,
     .jm-pagination__next span {
       display: none;
@@ -336,15 +387,6 @@ function onToken(token: Token) {
     .jm-pagination__prev,
     .jm-pagination__next {
       padding: 0 6px;
-    }
-
-    .jm-pagination__page {
-      min-width: 28px;
-      padding: 0 2px;
-    }
-
-    .jm-pagination__more {
-      width: 26px;
     }
   }
 }

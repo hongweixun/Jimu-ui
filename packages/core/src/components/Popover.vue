@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { toCssSize } from '../utils'
 
 defineOptions({ name: 'JmPopover' })
@@ -107,8 +107,76 @@ const panelStyle = computed(() => {
   if (gap) s['--jm-popover-offset'] = gap
   const max = toCssSize(props.maxWidth)
   if (max) s.maxWidth = max
+  /* 视口回移量：渲染后测量面板，越界部分用 margin 拉回来 */
+  s['--jm-popover-shift-x'] = `${shiftX.value}px`
+  s['--jm-popover-shift-y'] = `${shiftY.value}px`
   return s
 })
+
+/* ---------------- 视口边界自适应 ---------------- */
+/* 面板按触发器定位后可能伸出屏幕（居中 + 长文案时最常见）。
+   渲染完成后量一次实际位置，把超出部分用 margin 平移回来，
+   文案太长时先被 maxWidth 约束换行，再配合平移保证完整可见。 */
+const panelRef = ref<HTMLElement | null>(null)
+const shiftX = ref(0)
+const shiftY = ref(0)
+
+function clampToViewport() {
+  const el = panelRef.value
+  const host = root.value
+  if (!el || !host || typeof document === 'undefined') return
+  /* 用 offset* 布局值而不是 getBoundingClientRect：
+     进场动画的 scale transform 还在跑时 rect 会被缩小，布局值不受影响 */
+  const rr = host.getBoundingClientRect()
+  const left = rr.left + el.offsetLeft
+  const top = rr.top + el.offsetTop
+  const right = left + el.offsetWidth
+  const bottom = top + el.offsetHeight
+  if (!el.offsetWidth && !el.offsetHeight) return
+  /* 可用区域 = 视口 ∩ 最近的滚动/裁剪容器（手机模拟框、弹层内部等场景），
+     没有裁剪容器时就是视口本身 */
+  const vw = document.documentElement.clientWidth
+  const vh = document.documentElement.clientHeight
+  const pad = 8
+  let boxL = pad
+  let boxT = pad
+  let boxR = vw - pad
+  let boxB = vh - pad
+  let node: HTMLElement | null = host.parentElement
+  while (node && node !== document.body) {
+    const st = getComputedStyle(node)
+    const clipped = /(auto|hidden|clip|scroll)/.test(st.overflowX + st.overflowY)
+    if (clipped) {
+      const cr = node.getBoundingClientRect()
+      if (cr.width > 0 && cr.height > 0) {
+        boxL = Math.max(boxL, cr.left)
+        boxT = Math.max(boxT, cr.top)
+        boxR = Math.min(boxR, cr.right)
+        boxB = Math.min(boxB, cr.bottom)
+      }
+    }
+    node = node.parentElement
+  }
+  if (boxR - boxL < 40 || boxB - boxT < 40) return /* 裁剪容器过小，回移没有意义 */
+  shiftX.value = left < boxL ? boxL - left : right > boxR ? boxR - right : 0
+  shiftY.value = top < boxT ? boxT - top : bottom > boxB ? boxB - bottom : 0
+}
+
+watch(
+  () => visible.value,
+  (v) => {
+    if (typeof document === 'undefined') return
+    if (v) {
+      /* 先归零再测，避免上一次的偏移量污染这次的测量结果 */
+      shiftX.value = 0
+      shiftY.value = 0
+      nextTick(() => requestAnimationFrame(clampToViewport))
+    } else {
+      shiftX.value = 0
+      shiftY.value = 0
+    }
+  },
+)
 </script>
 
 <template>
@@ -124,6 +192,7 @@ const panelStyle = computed(() => {
     <Transition name="jm-popover-zoom">
       <div
         v-if="visible"
+        ref="panelRef"
         class="jm-popover__panel"
         :class="`is-${theme}`"
         :style="panelStyle"
@@ -167,6 +236,9 @@ const panelStyle = computed(() => {
   font-size: var(--jm-font-size-sm);
   line-height: 1.5;
   word-break: break-word;
+  /* 视口回移：渲染后测量越界量写入，margin 不与定位 transform 冲突 */
+  margin-left: var(--jm-popover-shift-x, 0px);
+  margin-top: var(--jm-popover-shift-y, 0px);
   animation: none;
 }
 

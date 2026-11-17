@@ -359,4 +359,19 @@ function focusField() {
 .jm-form-item.is-disabled .jm-form-item__label {
   color: var(--jm-text-color-4);
 }
+
+/* ---------- 大块控件（上传器等） ---------- */
+/* 整行模式右对齐会把 Uploader 的 4 列网格压成很小的格子，
+   换行占满整行并左对齐，格子大小恢复正常；
+   Uploader 是 grid，flex 子项里宽度会收缩到内容，必须显式撑满 */
+.jm-form-item.has-label .jm-form-item__value:has(.jm-uploader) {
+  flex: 1 1 100%;
+  justify-content: flex-start;
+  margin-top: 6px;
+  padding-bottom: 8px;
+}
+
+.jm-form-item__value .jm-uploader {
+  width: 100%;
+}
 </style>

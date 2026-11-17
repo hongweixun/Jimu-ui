@@ -97,11 +97,13 @@ import Fab from './components/Fab.vue'
 import BackTop from './components/BackTop.vue'
 import CheckTag from './components/CheckTag.vue'
 import Pagination from './components/Pagination.vue'
+import Ellipsis from './components/Ellipsis.vue'
+import Video from './components/Video.vue'
 
 import { setupAppearance } from './composables/useAppearance'
 import { vRipple } from './utils/ripple'
 
-export const version = '0.23.0'
+export const version = '0.24.0'
 
 export {
   Button,
@@ -181,6 +183,8 @@ export {
   BackTop,
   CheckTag,
   Pagination,
+  Ellipsis,
+  Video,
   Timeline,
   TimelineItem,
   Statistic,
@@ -375,6 +379,8 @@ const components = [
   BackTop,
   CheckTag,
   Pagination,
+  Ellipsis,
+  Video,
   Timeline,
   TimelineItem,
   Statistic,

@@ -79,7 +79,7 @@ const gridStyle = computed(() => {
   --jm-desc-label-w: 72px;
   --jm-desc-border-color: var(--jm-border-color);
   --jm-desc-label-bg: var(--jm-bg-page);
-  --jm-desc-padding-y: 8px;
+  --jm-desc-padding-y: 10px;
   --jm-desc-padding-x: 10px;
   box-sizing: border-box;
   display: grid;
@@ -104,7 +104,7 @@ const gridStyle = computed(() => {
 
 /* 无表格线时行与行之间留出呼吸间距；border 模式靠单元格边框收口，不能加 row-gap */
 .jm-descriptions:not(.is-border) {
-  row-gap: 6px;
+  row-gap: 10px;
 }
 
 .jm-descriptions__title {

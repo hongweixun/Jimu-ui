@@ -70,13 +70,14 @@
   height: 200%;
 }
 
-.jm-ellipsis {
+/* 注意：不要叫 jm-ellipsis——Ellipsis 组件的根类名是它，工具类会覆盖组件样式 */
+.jm-text-ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.jm-ellipsis-2 {
+.jm-text-ellipsis-2 {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
