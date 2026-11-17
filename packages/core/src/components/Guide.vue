@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 defineOptions({ name: 'JmGuide' })
 
@@ -28,6 +28,8 @@ const props = withDefaults(
     zIndex?: number
     /** 是否显示遮罩挖孔 */
     mask?: boolean
+    /** 挂载容器：默认 body 全屏遮罩；传容器（选择器/元素）则遮罩与气泡限制在容器内（模拟框、弹窗时用） */
+    teleport?: string | HTMLElement
   }>(),
   {
     zIndex: 2100,
@@ -44,6 +46,35 @@ const emit = defineEmits<{
 
 const targetRect = ref<{ left: number; top: number; right: number; bottom: number } | null>(null)
 const bubbleStyle = ref<Record<string, string>>({})
+/* 容器内挂载模式：坐标全部换算成相对容器的值，遮罩/气泡用 absolute 定位 */
+const inlineMode = ref(false)
+/* Teleport 目标：mounted 后解析（SSR 时保持 body） */
+const teleportTo = ref<string | HTMLElement>('body')
+
+onMounted(() => {
+  resolveTeleport()
+})
+
+function resolveTeleport() {
+  const t = props.teleport
+  if (!t || typeof document === 'undefined') {
+    teleportTo.value = 'body'
+    return
+  }
+  const node = typeof t === 'string' ? document.querySelector<HTMLElement>(t) : t
+  teleportTo.value = node ?? 'body'
+}
+
+/** 容器内挂载时返回容器的视口原点与尺寸；body 模式返回 null（用 fixed + 视口坐标） */
+function containerBox() {
+  const node = teleportTo.value
+  if (!node || node === 'body' || node === document.body || typeof document === 'undefined') return null
+  const el = node instanceof HTMLElement ? node : document.querySelector<HTMLElement>(node)
+  if (!el) return null
+  const cr = el.getBoundingClientRect()
+  if (!cr.width || !cr.height) return null
+  return { x: cr.left, y: cr.top, w: cr.width, h: cr.height }
+}
 
 const step = computed(() => (props.current >= 0 && props.current < props.steps.length ? props.steps[props.current] : null))
 const open = computed(() => !!step.value)
@@ -59,8 +90,15 @@ function resolveElement(el: GuideStep['element']): HTMLElement | null {
 
 function measure() {
   const s = step.value
-  /* dialog 模式不指向具体元素：不测量、不挖孔，整屏遮罩 */
-  if (!s || s.mode === 'dialog' || typeof document === 'undefined') {
+  if (!s || typeof document === 'undefined') {
+    targetRect.value = null
+    inlineMode.value = false
+    return
+  }
+  const box = containerBox()
+  inlineMode.value = !!box
+  /* dialog 模式不指向具体元素：不测量、不挖孔，容器/整屏遮罩 + 居中弹窗 */
+  if (s.mode === 'dialog') {
     targetRect.value = null
     return
   }
@@ -72,13 +110,26 @@ function measure() {
   }
   el.scrollIntoView({ block: 'center', behavior: 'smooth' })
   requestAnimationFrame(() => {
+    /* 滚动/布局可能变化，重新取一次容器 */
+    const b = containerBox()
+    inlineMode.value = !!b
     const r = el.getBoundingClientRect()
     const p = padding.value
-    targetRect.value = {
-      left: Math.max(0, r.left - p),
-      top: Math.max(0, r.top - p),
-      right: Math.min(document.documentElement.clientWidth, r.right + p),
-      bottom: Math.min(document.documentElement.clientHeight, r.bottom + p),
+    if (b) {
+      /* 容器内挂载：坐标换成相对容器，并钳制在容器内 */
+      targetRect.value = {
+        left: Math.max(0, r.left - b.x - p),
+        top: Math.max(0, r.top - b.y - p),
+        right: Math.min(b.w, r.right - b.x + p),
+        bottom: Math.min(b.h, r.bottom - b.y + p),
+      }
+    } else {
+      targetRect.value = {
+        left: Math.max(0, r.left - p),
+        top: Math.max(0, r.top - p),
+        right: Math.min(document.documentElement.clientWidth, r.right + p),
+        bottom: Math.min(document.documentElement.clientHeight, r.bottom + p),
+      }
     }
     positionBubble()
   })
@@ -86,20 +137,24 @@ function measure() {
 
 function positionBubble() {
   const s = step.value
-  const r = targetRect.value
-  if (!s || !r || typeof document === 'undefined') return
+  if (!s || typeof document === 'undefined') return
+  const box = containerBox()
+  inlineMode.value = !!box
+  const pos = box ? 'absolute' : 'fixed'
   const placement = s.placement ?? 'bottom'
   if (s.mode === 'dialog' || placement === 'center') {
-    bubbleStyle.value = { position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
+    bubbleStyle.value = { position: pos, left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
     return
   }
-  const vw = document.documentElement.clientWidth
-  const vh = document.documentElement.clientHeight
+  if (!targetRect.value) return
+  const r = targetRect.value
+  const vw = box ? box.w : document.documentElement.clientWidth
+  const vh = box ? box.h : document.documentElement.clientHeight
   const pad = 12
   /* 气泡宽度先给一个估值，定位后按实际尺寸再校正一次 */
   const w = Math.min(bubbleEl.value?.offsetWidth || 260, vw - pad * 2)
   const h = bubbleEl.value?.offsetHeight || 120
-  const style: Record<string, string> = { position: 'fixed', maxWidth: `${vw - pad * 2}px` }
+  const style: Record<string, string> = { position: pos, maxWidth: `${vw - pad * 2}px` }
   if (placement === 'top' || placement === 'bottom') {
     let left = (r.left + r.right) / 2 - w / 2
     left = Math.min(Math.max(pad, left), vw - pad - w)
@@ -144,6 +199,8 @@ function onResize() {
 watch(open, (v) => {
   if (typeof window === 'undefined') return
   if (v) {
+    /* 容器可能在组件挂载后才出现，打开时再解析一次 */
+    resolveTeleport()
     window.addEventListener('scroll', onScroll, true)
     window.addEventListener('resize', onResize)
   } else {
@@ -190,10 +247,10 @@ const isLast = computed(() => props.current >= props.steps.length - 1)
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport :to="teleportTo">
     <template v-if="open && step">
       <!-- 遮罩挖孔：4 块黑片拼出高亮区 -->
-      <div class="jm-guide__mask" :style="{ zIndex }">
+      <div class="jm-guide__mask" :class="{ 'is-inline': inlineMode }" :style="{ zIndex }">
         <template v-if="mask && targetRect">
           <div class="jm-guide__shade" :style="{ left: 0, top: 0, right: 0, height: `${Math.max(0, targetRect.top)}px` }" />
           <div
@@ -261,6 +318,11 @@ const isLast = computed(() => props.current >= props.steps.length - 1)
 .jm-guide__mask {
   position: fixed;
   inset: 0;
+}
+
+/* 容器内挂载：遮罩铺满容器而不是视口 */
+.jm-guide__mask.is-inline {
+  position: absolute;
 }
 
 .jm-guide__shade {

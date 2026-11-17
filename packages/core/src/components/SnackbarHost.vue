@@ -26,7 +26,8 @@ function onAction(it: SnackbarItem) {
 </script>
 
 <template>
-  <Teleport to="body">
+  <!-- 挂在 body 时 fixed 铺满视口；传 target 挂进容器时 absolute 铺满容器 -->
+  <div class="jm-snackbar-host" :class="{ 'is-inline': snackbarState.inline }">
     <!-- 禁止穿透点击的透明屏障 -->
     <Transition name="jm-snackbar-fade">
       <div
@@ -147,13 +148,22 @@ function onAction(it: SnackbarItem) {
         </div>
       </TransitionGroup>
     </div>
-  </Teleport>
+  </div>
 </template>
 
 <style>
-.jm-snackbar-host .jm-snackbar-group,
-.jm-snackbar-group {
+.jm-snackbar-host {
   position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.jm-snackbar-host.is-inline {
+  position: absolute;
+}
+
+.jm-snackbar-group {
+  position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
@@ -175,7 +185,7 @@ function onAction(it: SnackbarItem) {
 }
 
 .jm-snackbar__blocker {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: auto;
 }
@@ -183,7 +193,7 @@ function onAction(it: SnackbarItem) {
 .jm-snackbar {
   display: flex;
   align-items: center;
-  width: min(var(--jm-snackbar-width, 300px), calc(100vw - 32px));
+  width: min(var(--jm-snackbar-width, 300px), 100%);
   box-sizing: border-box;
   margin: 6px 0;
   padding: 12px 14px;

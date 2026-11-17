@@ -51,6 +51,7 @@ const current = ref(-1) // -1 表示关闭；引导开始时置 0
 | current | 当前步骤（`v-model:current`），`-1` 关闭 | `number` | - |
 | zIndex | 遮罩层级 | `number` | `2100` |
 | mask | 是否挖孔遮罩（`false` 只盖全屏黑片） | `boolean` | `true` |
+| teleport | 挂载容器（选择器或元素）：传后遮罩与气泡限制在容器内，默认挂 body 全屏 | `string \| HTMLElement` | `body` |
 
 ### GuideStep
 

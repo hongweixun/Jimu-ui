@@ -69,6 +69,7 @@ clearSnackbar() // 关闭当前（单例）或全部（多例）
 | action | 操作按钮文字 | `string` | - |
 | onAction | 点击操作按钮 | `() => void` | - |
 | forbidClick | 禁止穿透点击 | `boolean` | `false`（loading 默认 `true`） |
+| target | 挂载容器，消息条限制在容器内显示（嵌入弹窗、模拟框时用） | `HTMLElement` | -（挂 body 全屏） |
 | onClose | 关闭回调 | `() => void` | - |
 
 ### 静态方法

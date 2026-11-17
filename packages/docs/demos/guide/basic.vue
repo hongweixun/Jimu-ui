@@ -63,8 +63,8 @@ const dialogSteps: GuideStep[] = [
       v-model:current 控制步骤；目标元素会自动滚动到可视区并挖孔高亮；滚动/缩放时自动重算位置。
     </p>
 
-    <jm-guide v-model:current="current" :steps="steps" />
-    <jm-guide v-model:current="currentDialog" :steps="dialogSteps" />
+    <jm-guide v-model:current="current" :steps="steps" teleport=".phone__screen" />
+    <jm-guide v-model:current="currentDialog" :steps="dialogSteps" teleport=".phone__screen" />
   </div>
 </template>
 

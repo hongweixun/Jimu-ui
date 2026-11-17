@@ -20,6 +20,8 @@ export interface SnackbarOptions {
   onAction?: () => void
   /** 禁止穿透点击（loading 默认 true） */
   forbidClick?: boolean
+  /** 指定挂载容器，消息条限制在容器内显示（嵌入弹窗、模拟框时很有用） */
+  target?: HTMLElement | null
   onClose?: () => void
 }
 
@@ -38,11 +40,14 @@ export interface SnackbarItem extends Omit<SnackbarOptions, 'action' | 'onAction
 
 export const snackbarState = reactive({
   items: [] as SnackbarItem[],
+  /** 挂在指定容器内时为 true：消息条改用 absolute 定位限制在容器里 */
+  inline: false,
 })
 
 let uid = 0
 let multiple = false
 let defaults: Partial<SnackbarOptions> = {}
+let hostContainer: HTMLElement | null = null
 
 function removeItem(id: number) {
   const idx = snackbarState.items.findIndex((it) => it.id === id)
@@ -57,18 +62,36 @@ function normalize(options: SnackbarOptions | string): SnackbarOptions {
   return { ...defaults, ...opts } as SnackbarOptions
 }
 
-function mountHost() {
-  if (typeof document === 'undefined' || document.querySelector('[data-jm-snackbar-host]')) return
-  const container = document.createElement('div')
-  container.setAttribute('data-jm-snackbar-host', '')
-  document.body.appendChild(container)
-  render(createVNode(SnackbarHost), container)
+function mountHost(target?: HTMLElement | null) {
+  if (typeof document === 'undefined') return
+  const parent = target && target.isConnected ? target : document.body
+  if (hostContainer && hostContainer.parentElement === parent) return
+  if (hostContainer) {
+    render(null, hostContainer)
+    hostContainer.remove()
+    hostContainer = null
+  }
+  hostContainer = document.createElement('div')
+  hostContainer.setAttribute('data-jm-snackbar-host', '')
+  if (parent !== document.body) {
+    /* 容器内挂载：铺满容器，消息条用 absolute 定位限制在容器里 */
+    hostContainer.style.position = 'absolute'
+    hostContainer.style.top = '0'
+    hostContainer.style.right = '0'
+    hostContainer.style.bottom = '0'
+    hostContainer.style.left = '0'
+    hostContainer.style.pointerEvents = 'none'
+  }
+  parent.appendChild(hostContainer)
+  render(createVNode(SnackbarHost), hostContainer)
 }
 
 /** 显示消息条，返回带 clear 的实例句柄 */
 export function showSnackbar(options: SnackbarOptions | string): SnackbarHandle {
-  mountHost()
   const opts = normalize(options)
+  mountHost(opts.target)
+  /* 目标容器失效时 mountHost 会回退挂到 body，inline 以实际挂载结果为准 */
+  snackbarState.inline = !!hostContainer && hostContainer.parentElement !== document.body
   const id = ++uid
 
   // 单例模式：先清掉旧的再开新的

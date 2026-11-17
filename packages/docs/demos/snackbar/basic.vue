@@ -1,6 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { showSnackbar, clearSnackbar } from 'jimu-ui'
+
+const root = ref<HTMLElement | null>(null)
+
+/* 文档站里把消息条挂进手机模拟器屏幕；真机上不传 target 时默认挂 body 全屏 */
+onMounted(() => {
+  const screen = root.value?.closest('.phone__screen') as HTMLElement | null
+  showSnackbar.setDefaultOptions({ target: screen ?? null })
+})
+
+onUnmounted(() => {
+  showSnackbar.resetDefaultOptions()
+})
 
 let loadingBar: { clear: () => void } | null = null
 
@@ -26,7 +38,10 @@ function openBottom() {
 
 function showToastTip(msg: string) {
   // Snackbar 的 action 里再弹一个提示
-  import('jimu-ui').then(({ showToast }) => showToast({ message: msg, type: 'success' }))
+  import('jimu-ui').then(({ showToast }) => {
+    const screen = root.value?.closest('.phone__screen') as HTMLElement | null
+    showToast({ message: msg, type: 'success', target: screen ?? undefined })
+  })
 }
 
 function openVertical() {
@@ -48,7 +63,7 @@ function openLoading() {
 </script>
 
 <template>
-  <div class="demo-page">
+  <div ref="root" class="demo-page">
     <p class="demo-label">类型（默认单例，新的顶掉旧的）</p>
     <div class="row">
       <button class="chip" @click="open('normal')">普通</button>
