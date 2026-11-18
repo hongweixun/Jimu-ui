@@ -253,7 +253,6 @@ const maskStyle = computed(() => ({ zIndex: String(zIndex.value - 1) }))
   font-family: var(--jm-font-family);
   color: var(--jm-text-color);
   overflow: hidden;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* 面板自身是焦点落点（tabindex="-1"），焦点位置由内部控件体现 */

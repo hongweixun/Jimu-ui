@@ -463,7 +463,15 @@ function scrollToMonth(target: Date, smooth = false) {
   }
   const reduced =
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  el.scrollTo({ top, behavior: smooth && !reduced ? 'smooth' : 'auto' })
+  if (smooth && !reduced) {
+    el.scrollTo({ top, behavior: 'smooth' })
+  } else {
+    /* 直接赋值而不是 scrollTo({ behavior: 'auto' })：iOS 的动量滚动容器上，
+       程序化 scrollTo 会被推迟到下一次触摸帧才真正生效——弹出首帧仍画在顶部
+       月份，随后才跳到目标月，真机上表现为「先闪一下」。scrollTop 赋值是
+       同步生效的，弹出第一帧就在目标月。 */
+    el.scrollTop = top
+  }
 }
 
 function prevMonth() {
@@ -874,10 +882,11 @@ button.jm-calendar__month {
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  /* iOS WebView：强制合成层 + 原生惯性，避免弹出首帧滚动区不绘制（要滑一下才出来） */
-  -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
   scrollbar-width: none;
+  /* 不加 translateZ(0) / -webkit-overflow-scrolling 之类的合成层 hack：
+     它们把滚动区变成独立合成层，配合弹层滑入的真机层合成会出现旧纹理残影
+     （选中圆被画成月牙状错位图形）。首帧定位靠 scrollToMonth 里的同步
+     scrollTop 赋值保证，不需要这些补偿。 */
 }
 
 .jm-calendar__viewport::-webkit-scrollbar {
