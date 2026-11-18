@@ -87,6 +87,19 @@ print("    [dbg]", st)
 check("calendar-scroll", "viewport renders months", st["months"] > 1, True)
 check("calendar-scroll", "viewport ~ one month tall", abs(st["viewportH"] - st["monthH"]) <= 24, True)
 
+# 月份分隔标题：数量与月份节一致，第二条是下个月
+titles = json.loads(
+    tab.js(
+        """(()=>{
+          const cal=document.querySelector('.jm-calendar');
+          const t=[...cal.querySelectorAll('.jm-calendar__month-title')];
+          return JSON.stringify({n: t.length, second: t[1]?t[1].textContent.trim():null});
+        })()"""
+    )
+)
+check("calendar-title", "month title per section", titles["n"] == st["months"], True)
+check("calendar-title", "second month labeled", titles["second"], "2026年6月")
+
 # 向下滚两个月 → 副标题跟随
 raw = tab.js(
     """(()=>{
@@ -182,6 +195,27 @@ check("calendar-poppable", "content rendered immediately (iOS)", st_pop["daysH"]
 check("calendar-poppable", "pre-scrolled to today month (no blank)", st_pop["scrollTop"] > 0, True)
 check("calendar-poppable", "subtitle shows current month", "2026年11月" in (st_pop["label"] or ""), True)
 check("calendar-poppable", "popup has close & confirm", st_pop["closeBtn"] and st_pop["confirm"], True)
+
+# 高度适配：标题与确认按钮必须同时可见（都落在弹层面板可视范围内）
+fit = json.loads(
+    tab.js(
+        """(()=>{
+          const p=document.querySelector('.jm-popup');
+          const cal=p.querySelector('.jm-calendar');
+          const pr=p.getBoundingClientRect();
+          const title=cal.querySelector('.jm-calendar__header').getBoundingClientRect();
+          const confirm=cal.querySelector('.jm-calendar__confirm').getBoundingClientRect();
+          return JSON.stringify({
+            titleVisible: title.top >= pr.top - 1,
+            confirmVisible: confirm.bottom <= pr.bottom + 1,
+            calH: cal.offsetHeight, panelH: p.clientHeight,
+          });
+        })()"""
+    )
+)
+print("    [dbg] fit", fit)
+check("calendar-poppable", "title visible with confirm", fit["titleVisible"] and fit["confirmVisible"], True)
+check("calendar-poppable", "calendar fits panel (no inner scroll)", fit["calH"] <= fit["panelH"] + 1, True)
 
 # 弹层内相对滚一个月（从当前定位处 +1）
 tab.js(

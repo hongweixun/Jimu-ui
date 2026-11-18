@@ -302,6 +302,27 @@ function onConfirm() {
 }
 
 /* ---------------- 弹出模式（复用 Popup 底部弹层） ---------------- */
+const rootRef = ref<HTMLElement | null>(null)
+
+/**
+ * 弹窗视口高度自适应：弹层面板 max-height 只有宿主的 85%，
+ * 头部（标题/月份栏）+ 固定高度视口 + 底部确认超过它时，面板会自己滚动，
+ * 表现为「标题可见则确定看不见」。这里按宿主实际高度把视口压缩到正好放得下，
+ * 标题和确定按钮永远同时可见。
+ */
+function fitPoppableViewport() {
+  if (!props.poppable || typeof document === 'undefined') return
+  const root = rootRef.value
+  if (!root) return
+  const host = root.closest('.jm-popup')?.parentElement
+  const hostH = host?.clientHeight || window.innerHeight || 0
+  const headerH = root.querySelector<HTMLElement>('.jm-calendar__header')?.offsetHeight ?? 0
+  const weekdaysH = root.querySelector<HTMLElement>('.jm-calendar__weekdays')?.offsetHeight ?? 0
+  const footerH = root.querySelector<HTMLElement>('.jm-calendar__footer')?.offsetHeight ?? 0
+  const avail = Math.max(200, Math.round(hostH * 0.85 - headerH - weekdaysH - footerH - 8))
+  root.style.setProperty('--jm-calendar-viewport-h', avail + 'px')
+}
+
 const popupBindings = computed(() =>
   props.poppable
     ? {
@@ -327,6 +348,7 @@ watch(
        scrollTop 在首帧就位。iOS WebView 上「先开弹层、再异步渲染滚动区」
        会出现首帧空白、要滑一下才画出来的问题——这里全部提前做掉。 */
     nextTick(() => {
+      fitPoppableViewport()
       measureMonthHeight()
       scrollToMonth(clampToRange(selected.value[0] ?? new Date()))
     })
@@ -334,10 +356,24 @@ watch(
   { immediate: true },
 )
 
+/* 旋转 / 窗口尺寸变化时重算视口可用高度 */
+function onWinResize() {
+  fitPoppableViewport()
+}
+
+onMounted(() => {
+  if (props.poppable) window.addEventListener('resize', onWinResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onWinResize)
+  if (scrollRaf) cancelAnimationFrame(scrollRaf)
+})
+
 /* ---------------- 月份纵向滚动（Vant / TDesign 式连续滚月） ---------------- */
 const scrollerRef = ref<HTMLElement | null>(null)
-/* 每月高度：6 行（42 格）+ 底部留白（--jm-space-2）。挂载后用实测值校正 */
-const monthHeight = ref(392)
+/* 每月高度：标题行 26 + 6 行（42 格）+ 底部留白（--jm-space-2）。挂载后用实测值校正 */
+const monthHeight = ref(418)
 const visibleIndex = ref(0)
 
 /* 月份过多时只渲染可视区附近，其余用占位高度撑起；
@@ -370,7 +406,7 @@ const bottomPadHeight = computed(() =>
 function estimateMonthHeight(): number {
   const rh =
     typeof props.rowHeight === 'number' ? props.rowHeight : parseFloat(String(props.rowHeight)) || 64
-  return Math.round(rh * 6) + 8
+  return Math.round(rh * 6) + 8 + 26 // 6 行 + 底部留白 + 月份标题行
 }
 
 function measureMonthHeight() {
@@ -575,6 +611,7 @@ defineExpose({
 <template>
   <component :is="poppable ? JmPopup : 'div'" v-bind="popupBindings" @update:show="onPopupShow">
     <div
+      ref="rootRef"
       class="jm-calendar"
       :class="{ 'is-square': shape === 'square', 'is-readonly': readonly, 'is-poppable': poppable }"
       :style="styles"
@@ -661,6 +698,10 @@ defineExpose({
             :data-mi="item.index"
             :style="isWindowed ? { height: monthHeight + 'px' } : undefined"
           >
+            <!-- 月份分隔标题：每个滚动段落明确属于哪年哪月（TDesign 式） -->
+            <div class="jm-calendar__month-title">
+              {{ item.month.getFullYear() }}年{{ item.month.getMonth() + 1 }}月
+            </div>
             <div class="jm-calendar__days">
               <button
                 v-for="(day, di) in item.days"
@@ -792,22 +833,39 @@ button.jm-calendar__month {
 .jm-calendar__viewport {
   flex: 1 1 auto;
   min-height: 0;
-  /* 内联模式默认一屏一个月（6 行）；poppable 用固定高度多露内容提示可滚 */
-  height: calc(var(--jm-calendar-row-height) * 6 + 8px);
+  /* 内联模式默认一屏一个月（6 行）；poppable 由 fitPoppableViewport 按宿主高度动态注入 */
+  height: calc(var(--jm-calendar-row-height) * 6 + 34px);
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
   /* iOS WebView：强制合成层 + 原生惯性，避免弹出首帧滚动区不绘制（要滑一下才出来） */
   -webkit-overflow-scrolling: touch;
   transform: translateZ(0);
+  scrollbar-width: none;
+}
+
+.jm-calendar__viewport::-webkit-scrollbar {
+  display: none;
 }
 
 .jm-calendar.is-poppable .jm-calendar__viewport {
-  height: min(58vh, 440px);
+  height: var(--jm-calendar-viewport-h, min(58vh, 440px));
 }
 
 .jm-calendar__month {
   position: relative;
+}
+
+/* 月份分隔标题：固定 26px，与 estimateMonthHeight 保持一致（窗口化高度换算依赖它） */
+.jm-calendar__month-title {
+  height: 26px;
+  padding: 0 var(--jm-space-3);
+  color: var(--jm-text-color-2);
+  font-size: var(--jm-font-size-xs);
+  font-weight: var(--jm-font-weight-medium);
+  line-height: 26px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
 }
 
 .jm-calendar__pad {
