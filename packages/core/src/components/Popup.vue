@@ -18,6 +18,12 @@ const props = withDefaults(
     zIndex?: number
     /** 锁定背景滚动 */
     lock?: boolean
+    /**
+     * 常驻挂载：内容随组件创建即渲染（隐藏），打开时零 DOM 创建。
+     * 重内容（日历这类几百个节点）的弹层强烈建议开——
+     * 「点开才建 DOM + 强制回流」会让真机动画起步掉帧，表现为先闪一下。
+     */
+    eager?: boolean
     radius?: number | string
     /** 挂载目标：false 在当前位置渲染（嵌入手机模拟框等场景），字符串/元素为指定容器，默认 body */
     teleport?: boolean | string | Element
@@ -46,6 +52,7 @@ const props = withDefaults(
     teleport: true,
     closeOnEsc: false,
     trapFocus: false,
+    eager: false,
   },
 )
 
@@ -189,8 +196,11 @@ const maskStyle = computed(() => ({ zIndex: String(zIndex.value - 1) }))
       </Transition>
 
       <Transition :name="transitionName">
+        <!-- eager：内容常驻（v-if 只挡非 eager 的未打开态），显隐交给 v-show；
+             Vue 的 Transition 对 v-show 切换同样会套 enter/leave 过渡类 -->
         <div
-          v-if="show"
+          v-if="eager || show"
+          v-show="show"
           ref="panelRef"
           class="jm-popup"
           :class="[

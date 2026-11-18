@@ -26,6 +26,7 @@ description: 五个方向的弹层容器，圆角、遮罩、安全区、滚动�
 | close-on-click-mask | 点遮罩关闭 | `boolean` | `true` |
 | safe-area | 底部/顶部预留安全区 | `boolean` | `true` |
 | lock | 锁定背景滚动 | `boolean` | `true` |
+| eager | 内容常驻挂载（隐藏），打开时零 DOM 创建。重内容弹层（日历等几百节点）建议开，避免真机动画起步掉帧 | `boolean` | `false` |
 | z-index | 层级 | `number` | `1000` |
 | teleport | 挂载目标：`false` 就地渲染（嵌入手机模拟框/弹窗内），字符串按选择器、元素直接挂载（Vant 同款语义） | `boolean \| string \| Element` | `true` |
 | beforeClose | 关闭前钩子，返回 false / reject 则不关闭 | `() => boolean \| Promise<boolean>` | — |

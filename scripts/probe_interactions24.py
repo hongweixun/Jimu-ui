@@ -242,7 +242,7 @@ tab.js(
 )
 time.sleep(0.6)
 label2 = tab.js(
-    "(()=>{const cal=document.querySelector('.jm-popup .jm-calendar');"
+    "(()=>{const p=[...document.querySelectorAll('.jm-popup')].find(p=>p.offsetHeight>0);if(!p)return null;const cal=p.querySelector('.jm-calendar');"
     "const l=cal.querySelector('.jm-calendar__month-text')||cal.querySelector('.jm-calendar__month');"
     "return l?l.textContent.trim():null;})()"
 )
@@ -271,7 +271,7 @@ tab.js(
     "(()=>{const b=document.querySelector('.jm-popup .jm-calendar__confirm');if(b)b.click();else return 'no-btn';})()"
 )
 time.sleep(1.0)
-closed = tab.js("(()=>{return !document.querySelector('.jm-popup');})()")
+closed = tab.js("(()=>{const p=[...document.querySelectorAll('.jm-popup')].find(p=>p.offsetHeight>0);return !p;})()")
 check("calendar-poppable", "confirm closes popup", bool(closed), True)
 note = tab.js(
     "[...document.querySelectorAll('.demo-note')].map(n=>n.textContent).join('|')"
@@ -282,7 +282,7 @@ check("calendar-poppable", "result note updated", "11月20日" in (note or ""), 
 print("== calendar poppable bounds ==")
 open2 = tab.js(
     """(()=>{
-      if(document.querySelector('.jm-popup')) return 'popup-left-open';
+      if([...document.querySelectorAll('.jm-popup')].find(p=>p.offsetHeight>0)) return 'popup-left-open';
       const btn=[...document.querySelectorAll('.demo-page button')].find(b=>b.textContent.includes('请假区间'));
       if(!btn) return 'no-btn';
       btn.click();
@@ -290,12 +290,13 @@ open2 = tab.js(
     })()"""
 )
 check("calendar-poppable", "range popup opened", open2, "ok")
-wait_for("document.querySelectorAll('.jm-popup').length > 0", 8)
+wait_for("!!([...document.querySelectorAll('.jm-popup')].find(p=>p.offsetHeight>0))", 8)
 time.sleep(0.8)
 bounds = json.loads(
     tab.js(
         """(()=>{
-          const cal=document.querySelector('.jm-popup .jm-calendar');
+          const p=[...document.querySelectorAll('.jm-popup')].find(p=>p.offsetHeight>0);
+          const cal=p?p.querySelector('.jm-calendar'):null;
           if(!cal) return JSON.stringify({err:'no-popup'});
           const vp=cal.querySelector('.jm-calendar__viewport');
           const label=cal.querySelector('.jm-calendar__month-text')||cal.querySelector('.jm-calendar__month');
@@ -308,10 +309,10 @@ check("calendar-poppable", "range calendar min bound", "2026年11月" in (bounds
 check("calendar-poppable", "range calendar months 2026-11~2027-12", bounds.get("months"), 14)
 
 # 滚到底 → 2027年12月
-tab.js("document.querySelector('.jm-popup .jm-calendar__viewport').scrollTop = 99999")
+tab.js("(()=>{const p=[...document.querySelectorAll('.jm-popup')].find(p=>p.offsetHeight>0);if(!p)return;const vp=p.querySelector('.jm-calendar__viewport');if(vp)vp.scrollTop=99999;})()")
 time.sleep(0.6)
 bottom_label = tab.js(
-    "(()=>{const cal=document.querySelector('.jm-popup .jm-calendar');"
+    "(()=>{const p=[...document.querySelectorAll('.jm-popup')].find(p=>p.offsetHeight>0);if(!p)return null;const cal=p.querySelector('.jm-calendar');"
     "const l=cal.querySelector('.jm-calendar__month-text')||cal.querySelector('.jm-calendar__month');"
     "return l?l.textContent.trim():null;})()"
 )
@@ -319,7 +320,7 @@ check("calendar-poppable", "range calendar max bound", "2027年12月" in (bottom
 
 # 关闭
 tab.js(
-    "(()=>{const b=document.querySelector('.jm-popup .jm-popup__close');if(b)b.click();})()"
+    "(()=>{const p=[...document.querySelectorAll('.jm-popup')].find(p=>p.offsetHeight>0);const b=p&&p.querySelector('.jm-popup__close');if(b)b.click();})()"
 )
 time.sleep(0.6)
 

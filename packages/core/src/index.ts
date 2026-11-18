@@ -107,7 +107,7 @@ import Guide from './components/Guide.vue'
 import { setupAppearance } from './composables/useAppearance'
 import { vRipple } from './utils/ripple'
 
-export const version = '0.25.11'
+export const version = '0.25.12'
 
 export {
   Button,

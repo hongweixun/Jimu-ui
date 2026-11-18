@@ -229,10 +229,13 @@ function buildDays(y: number, m: number): CalendarDay[] {
     if (props.type === 'range') {
       const s = rangeStart.value
       const e = rangeEnd.value
-      day.isStart = !!s && sameDay(date, s)
-      day.isEnd = !!e && sameDay(date, e)
-      day.inRange = !!s && !!e && date > s && date < e
-      day.selected = day.isStart || day.isEnd
+      /* 起止都选中才画区间带；只选了起点（或只选终点）时只显示圆形选中——
+         对齐 Vant/TDesign，否则起点格「圆+半条带」看起来像个月牙，很怪 */
+      const complete = !!s && !!e
+      day.isStart = complete && !!s && sameDay(date, s)
+      day.isEnd = complete && !!e && sameDay(date, e)
+      day.inRange = complete && !!s && !!e && date > s && date < e
+      day.selected = (!!s && sameDay(date, s)) || (!!e && sameDay(date, e))
     } else {
       day.selected = selected.value.some((d) => sameDay(d, date))
     }
@@ -337,6 +340,9 @@ const popupBindings = computed(() =>
         closeable: true,
         teleport: props.teleport,
         safeArea: true,
+        /* 内容常驻挂载：日历是几百个节点的重弹层，点开才建 DOM 会让真机
+           动画起步掉帧（表现为先闪一下）。挂载时建好、打开只切显隐。 */
+        eager: true,
       }
     : {},
 )
