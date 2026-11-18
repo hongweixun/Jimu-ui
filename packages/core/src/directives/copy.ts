@@ -1,4 +1,5 @@
 import type { Directive, DirectiveBinding } from 'vue'
+import { showSnackbar } from '../components/snackbar'
 
 /**
  * 复制指令（v-copy）
@@ -11,6 +12,9 @@ import type { Directive, DirectiveBinding } from 'vue'
  *   2. textarea + document.execCommand('copy') —— 老设备 / 非安全上下文兜底，
  *      需要把 textarea 挪到视口外再选中，复制完立刻移除（不闪屏、不抢焦点滚动）。
  *
+ * 反馈：剪贴板用户看不见，复制成功默认弹一条「复制成功」消息条（feedback 关闭
+ * 或传自定义文案可覆盖）；没有任何反馈用户根本不知道复制成没成功。
+ *
  * 文本在触发时取值（binding.value 可以是字符串或返回字符串的函数），
  * 保证复制到的是点击那一刻的最新内容。
  */
@@ -18,6 +22,11 @@ import type { Directive, DirectiveBinding } from 'vue'
 export interface CopyOptions {
   /** 要复制的文本；传函数则点击时求值（动态内容推荐） */
   text: string | (() => string)
+  /**
+   * 复制成功提示：默认 true 弹「复制成功」消息条；
+   * 传字符串自定义文案；传 false 关闭（完全自己接管，比如用 onSuccess）
+   */
+  feedback?: boolean | string
   /** 复制成功回调 */
   onSuccess?: (text: string) => void
   /** 复制失败回调（极少出现：非安全上下文 + execCommand 也被禁时） */
@@ -71,10 +80,28 @@ async function doCopy(el: HTMLElement, options: CopyOptions, event: Event) {
   }
   try {
     await writeClipboard(text)
+    if (options.feedback !== false) {
+      showSnackbar({
+        content: typeof options.feedback === 'string' ? options.feedback : '复制成功',
+        duration: 1500,
+      })
+    }
     options.onSuccess?.(text)
   } catch (err) {
-    if (fallbackCopy(text)) options.onSuccess?.(text)
-    else options.onError?.(err)
+    if (fallbackCopy(text)) {
+      if (options.feedback !== false) {
+        showSnackbar({
+          content: typeof options.feedback === 'string' ? options.feedback : '复制成功',
+          duration: 1500,
+        })
+      }
+      options.onSuccess?.(text)
+    } else {
+      if (!options.onError && options.feedback !== false) {
+        showSnackbar({ content: '复制失败，请长按手动复制', duration: 2000 })
+      }
+      options.onError?.(err)
+    }
   }
 }
 

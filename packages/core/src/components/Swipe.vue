@@ -201,6 +201,19 @@ let startTime = 0
 const dragging = ref(false)
 let axis: 'x' | 'y' | null = null
 let moved = false
+/** down 阶段不能捕获指针：Chromium 会把随后合成的 click 一并派发给捕获元素，
+    指示点等内部元素的 click 就全被劫持了；真正拖起来（move 判定后）再捕获 */
+let captured = false
+
+function capturePointer(e: PointerEvent) {
+  if (captured) return
+  captured = true
+  try {
+    ;(e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId)
+  } catch {
+    /* 合成事件或指针已释放时捕获会失败，忽略即可 */
+  }
+}
 
 function onPointerDown(e: PointerEvent) {
   if (!props.touchable || count.value <= 1) return
@@ -208,18 +221,13 @@ function onPointerDown(e: PointerEvent) {
   dragging.value = true
   axis = null
   moved = false
+  captured = false
   startX = e.clientX
   startY = e.clientY
   startTime = Date.now()
   offset.value = 0
   animated.value = false
   stopAutoplay()
-  // 捕获指针：手指移出轮播区域后 move/up 仍然继续派发，拖动不会中断
-  try {
-    ;(e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId)
-  } catch {
-    /* 合成事件或指针已释放时捕获会失败，忽略即可 */
-  }
 }
 
 function onPointerMove(e: PointerEvent) {
@@ -237,6 +245,8 @@ function onPointerMove(e: PointerEvent) {
       resumeAutoplay()
       return
     }
+    // 确认是拖动了才捕获：手指/鼠标拖出组件后 move/up 仍继续派发，拖动不中断
+    capturePointer(e)
   }
 
   const delta = props.vertical ? dy : dx
@@ -253,11 +263,12 @@ function onPointerMove(e: PointerEvent) {
 }
 
 function onPointerUp(e: PointerEvent) {
-  if (!dragging) {
+  if (!dragging.value) {
     resumeAutoplay()
     return
   }
   dragging.value = false
+  captured = false
   const delta = props.vertical ? e.clientY - startY : e.clientX - startX
   const speed = Math.abs(delta) / Math.max(1, Date.now() - startTime)
   const distThreshold = Math.min(size.value * 0.25, 80)
@@ -277,6 +288,7 @@ function onPointerUp(e: PointerEvent) {
 function onPointerCancel() {
   if (!dragging.value) return
   dragging.value = false
+  captured = false
   offset.value = 0
   animated.value = true
   resumeAutoplay()
@@ -457,6 +469,7 @@ defineExpose({ next, prev, goTo, resize: measure, current, count })
 }
 
 .jm-swipe__dot {
+  position: relative;
   width: 6px;
   height: 6px;
   border-radius: var(--jm-radius-round);
@@ -467,6 +480,13 @@ defineExpose({ next, prev, goTo, resize: measure, current, count })
     background-color var(--jm-motion-transition-duration, 200ms) var(--jm-ease-out, ease-out);
   cursor: pointer;
   pointer-events: auto;
+}
+
+/* 6px 的点太难点：透明扩大热区，不影响视觉与布局 */
+.jm-swipe__dot::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
 }
 
 .jm-swipe__dot.is-active {

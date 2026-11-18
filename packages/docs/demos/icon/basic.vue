@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { registerIcon } from 'jimu-ui'
+import { registerIcon, vCopy } from 'jimu-ui'
 
 const groups = [
   {
@@ -22,9 +22,6 @@ const groups = [
 ]
 
 const copied = ref('')
-function copy(name: string) {
-  copied.value = name
-}
 
 /* 业务侧注册自己的图标，之后就能按名字用 */
 registerIcon('school', {
@@ -63,13 +60,19 @@ registerIcon('school', {
     <div v-for="g in groups" :key="g.title" class="group">
       <p class="group-title">{{ g.title }}</p>
       <div class="icons">
-        <button v-for="n in g.names" :key="n" class="cell" type="button" @click="copy(n)">
+        <button
+          v-for="n in g.names"
+          :key="n"
+          v-copy="{ text: `<jm-icon name=&quot;${n}&quot; />`, feedback: `已复制 ${n}`, onSuccess: () => (copied = n) }"
+          class="cell"
+          type="button"
+        >
           <jm-icon :name="n" :size="22" />
           <span class="cell-name">{{ n }}</span>
         </button>
       </div>
     </div>
-    <p class="demo-note">已选：{{ copied || '未选择' }}</p>
+    <p class="demo-note">点击图标格子复制用法代码，最近一次：{{ copied || '未选择' }}</p>
   </div>
 </template>
 

@@ -58,6 +58,7 @@ import SkeletonTitle from './components/SkeletonTitle.vue'
 import SkeletonParagraph from './components/SkeletonParagraph.vue'
 import VirtualList from './components/VirtualList.vue'
 import NoticeBar from './components/NoticeBar.vue'
+import TextScroll from './components/TextScroll.vue'
 import Sticky from './components/Sticky.vue'
 import Grid from './components/Grid.vue'
 import GridItem from './components/GridItem.vue'
@@ -106,7 +107,7 @@ import Guide from './components/Guide.vue'
 import { setupAppearance } from './composables/useAppearance'
 import { vRipple } from './utils/ripple'
 
-export const version = '0.25.3'
+export const version = '0.25.4'
 
 export {
   Button,
@@ -147,6 +148,7 @@ export {
   SkeletonParagraph,
   VirtualList,
   NoticeBar,
+  TextScroll,
   Sticky,
   Grid,
   GridItem,
@@ -348,6 +350,7 @@ const components = [
   SkeletonParagraph,
   VirtualList,
   NoticeBar,
+  TextScroll,
   Sticky,
   Grid,
   GridItem,

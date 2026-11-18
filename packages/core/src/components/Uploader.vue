@@ -25,6 +25,14 @@ const props = withDefaults(
     compressQuality?: number
     /** 压缩后长边上限（像素），超出按比例缩小 */
     compressMaxSize?: number
+    /**
+     * 目标体积上限（字节），如 200 * 1024 表示压到 200KB 以内。
+     * 设置后先降质量（最低 0.3）、再缩长边（最低 480px）迭代压缩，直到达标；
+     * 0 表示不按体积压，只用 quality / max-size 一次性压缩
+     */
+    compressTarget?: number
+    /** 压缩下限（字节）：原图已小于该值时跳过压缩，避免小图被白压一轮 */
+    compressMin?: number
     /** 移动端直接调起相机：user / environment */
     capture?: 'user' | 'environment'
     disabled?: boolean
@@ -81,6 +89,8 @@ const props = withDefaults(
     compress: false,
     compressQuality: 0.8,
     compressMaxSize: 1280,
+    compressTarget: 0,
+    compressMin: 0,
     deletable: true,
     previewImage: true,
     uploadText: '上传',
@@ -339,7 +349,7 @@ async function acceptFiles(files: File[]) {
   if (props.compress) {
     const compressed: File[] = []
     for (const f of accepted) {
-      if (isCompressible(f)) {
+      if (isCompressible(f) && !(props.compressMin > 0 && f.size <= props.compressMin)) {
         try {
           compressed.push(await compressImage(f))
         } catch {
@@ -400,28 +410,72 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   })
 }
 
-async function compressImage(file: File): Promise<File> {
-  const maxEdge = props.compressMaxSize || 1280
-  const quality = Math.min(1, Math.max(0, props.compressQuality ?? 0.8))
-  const img = await loadImage(file)
-  const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth, img.naturalHeight))
-  const w = Math.max(1, Math.round(img.naturalWidth * scale))
-  const h = Math.max(1, Math.round(img.naturalHeight * scale))
+/** 图片是否带透明像素（48px 缩略采样足够判断） */
+function hasAlpha(img: HTMLImageElement): boolean {
+  const c = document.createElement('canvas')
+  c.width = 48
+  c.height = 48
+  const ctx = c.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return true // 拿不到像素保守按有透明处理，保留 png
+  ctx.drawImage(img, 0, 0, 48, 48)
+  const data = ctx.getImageData(0, 0, 48, 48).data
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 255) return true
+  }
+  return false
+}
 
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return file
-  ctx.drawImage(img, 0, 0, w, h)
+async function compressImage(file: File): Promise<File> {
+  const target = Math.max(0, props.compressTarget ?? 0)
+  const quality = Math.min(1, Math.max(0, props.compressQuality ?? 0.8))
+  const maxEdge = props.compressMaxSize || 1280
+  const img = await loadImage(file)
 
   /* png 保留透明通道；其余统一 jpeg（拍照场景体积收益最大） */
   const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality))
-  if (!blob || blob.size >= file.size) return file // 压完反而更大就用原文件
+  /* 目标体积模式下 png 是无损编码，质量参数不起作用，降质量迭代全是空转：
+     无透明像素时改用 jpeg，质量降档才有真正的压缩杠杆 */
+  const mime =
+    target > 0 && type === 'image/png' && !hasAlpha(img) ? 'image/jpeg' : type
 
-  const name = file.name.replace(/\.[^.]+$/, '') + (type === 'image/png' ? '.png' : '.jpg')
-  return new File([blob], name, { type, lastModified: Date.now() })
+  const render = async (edge: number, q: number): Promise<Blob | null> => {
+    const scale = Math.min(1, edge / Math.max(img.naturalWidth, img.naturalHeight))
+    const w = Math.max(1, Math.round(img.naturalWidth * scale))
+    const h = Math.max(1, Math.round(img.naturalHeight * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0, w, h)
+    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mime, q))
+  }
+
+  let q = quality
+  let edge = maxEdge
+  let blob = await render(edge, q)
+  if (!blob) return file
+
+  /* 目标体积模式：先降质量（最低 0.3，步进 0.15），还不够再缩长边（最低 480px），
+     最多迭代 10 轮；某一轮已达标立即停，避免压过头白白损失画质 */
+  if (target > 0) {
+    for (let round = 0; round < 10 && blob.size > target; round++) {
+      if (q > 0.3) {
+        q = Math.max(0.3, q - 0.15)
+      } else {
+        edge = Math.round(edge * 0.8)
+        if (edge < 480) break // 再缩画质就崩了，接受当前结果
+      }
+      const next = await render(edge, q)
+      if (!next) break
+      blob = next
+    }
+  }
+
+  if (blob.size >= file.size) return file // 压完反而更大就用原文件
+
+  const name = file.name.replace(/\.[^.]+$/, '') + (mime === 'image/png' ? '.png' : '.jpg')
+  return new File([blob], name, { type: mime, lastModified: Date.now() })
 }
 
 function onDelete(index: number, e: MouseEvent) {

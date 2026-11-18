@@ -26,12 +26,25 @@ function onCopy(text: string) {
       <button v-copy="'EDU-8F3K-2026'" class="copy-btn" type="button">复制</button>
     </div>
 
+    <div class="copy-row">
+      <span class="copy-label">自定义提示</span>
+      <span class="copy-value">口令 XJ2026</span>
+      <button
+        v-copy="{ text: '优惠券口令 XJ2026', feedback: '口令已复制，快去粘贴' }"
+        class="copy-btn"
+        type="button"
+      >
+        复制
+      </button>
+    </div>
+
     <div v-copy="{ text: '整块都能点：适合优惠券口令、网盘链接', onSuccess: onCopy }" class="copy-block">
       整块区域可复制
       <p class="copy-sub">v-copy 也可以直接挂在 div 上</p>
     </div>
 
     <p class="demo-tip">{{ status }}</p>
+    <p class="demo-tip">复制成功会自动弹「复制成功」消息条；不想要提示传 feedback: false。</p>
   </div>
 </template>
 

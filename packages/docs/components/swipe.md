@@ -47,6 +47,8 @@ description: 手势拖动、自动播放、循环无缝、纵向轮播与指示�
 | indicator-position | 指示点位置 | `'bottom' \| 'top'` | `'bottom'` |
 | indicator-color | 指示点颜色 | `string` | 白色半透明 |
 | indicator-active-color | 选中指示点颜色 | `string` | `#fff` |
+
+指示点**可点击直接跳转到对应页**，透明扩大了点击热区（视觉仍 6px），手指不好点的问题一并处理；翻页会正常派发 `change`。
 | height | 容器高度（数字按 px） | `number \| string` | `160px` |
 | radius | 容器圆角 | `number \| string` | — |
 | threshold-speed | 手势判定速度（px/ms） | `number` | `0.35` |

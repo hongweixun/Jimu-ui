@@ -17,6 +17,25 @@ description: 图片选择、缩略图网格、数量与体积限制、删除与�
 
 <DemoBlock src="/demos/uploader/compress.vue" title="自动压缩开关" desc="开关切到开，选完图立即可在 file 里看到压缩后的体积；压缩失败不拦截，回退原文件。" />
 
+### 压到指定体积（compress-target）
+
+业务常常不是「压一遍就行」，而是硬性要求 **200KB 以内** 之类。传 `compress-target`（字节）后进入目标体积模式：先逐步降质量（最低 0.3、步进 0.15），还不够再缩长边（最低 480px），某一轮达标立即停——避免压过头白白损失画质。
+
+```vue
+<!-- 压到 200KB 以内；原图低于 30KB 的小图不再压 -->
+<jm-uploader
+  v-model="files"
+  compress
+  :compress-target="200 * 1024"
+  :compress-min="30 * 1024"
+/>
+```
+
+| 属性 | 说明 | 类型 | 默认值 |
+| --- | --- | --- | --- |
+| compress-target | 目标体积上限（字节），0 关闭目标体积模式 | `number` | `0` |
+| compress-min | 压缩下限（字节）：原图已小于该值时跳过压缩 | `number` | `0` |
+
 ## 拖拽排序
 
 `sortable` 开启长按排序：长按 420ms 抬起（放大 + 投影），拖动时其他格子实时让位，松手落位并把新顺序通过 `change` 派发。拖拽期间锁住页面滚动，拖完的这一次点击不会误开预览：
@@ -115,6 +134,8 @@ async function upload(file, { onProgress }) {
 | compress | 选中后自动压缩图片 | `boolean` | `false` |
 | compress-quality | 压缩质量 0~1（png 除外） | `number` | `0.8` |
 | compress-max-size | 压缩后长边上限（像素） | `number` | `1280` |
+| compress-target | 目标体积上限（字节），达标即停 | `number` | `0` |
+| compress-min | 压缩下限（字节），原图低于该值不压缩 | `number` | `0` |
 | capture | 调起相机 `user` / `environment` | `string` | — |
 | disabled | 禁用 | `boolean` | `false` |
 | readonly | 只读（保留缩略图） | `boolean` | `false` |

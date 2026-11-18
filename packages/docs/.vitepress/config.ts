@@ -34,6 +34,7 @@ const components = {
     { text: 'CountDown 倒计时', link: '/components/count-down' },
     { text: 'Statistic 数值统计', link: '/components/statistic' },
     { text: 'Ellipsis 文本省略', link: '/components/ellipsis' },
+    { text: 'TextScroll 滚动文本', link: '/components/text-scroll' },
     { text: 'Descriptions 描述列表', link: '/components/descriptions' },
     { text: 'Drag 拖拽', link: '/components/drag' },
     { text: 'QRCode 二维码', link: '/components/qrcode' },

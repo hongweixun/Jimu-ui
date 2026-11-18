@@ -39,8 +39,9 @@ function tip(text) {
 | 选项 | 类型 | 说明 |
 | --- | --- | --- |
 | `text` | `string \| (() => string)` | 要复制的文本；函数在**点击时**求值 |
+| `feedback` | `boolean \| string` | 成功提示：默认弹「复制成功」消息条；传字符串自定义文案；`false` 关闭 |
 | `onSuccess` | `(text) => void` | 复制成功，参数是实际复制的内容 |
-| `onError` | `(reason) => void` | 两层策略都失败（极少出现） |
+| `onError` | `(reason) => void` | 两层策略都失败（极少出现）；未传时自动弹「复制失败」提示 |
 
 值的三种形态：
 
@@ -50,8 +51,8 @@ function tip(text) {
 | `v-copy="{ text, onSuccess }"` | 带回调的完整配置 |
 | `v-copy="() => dynamic"` | 等价于 `{ text: () => dynamic }` |
 
-::: tip 复制成功后一定要有反馈
-剪贴板是用户看不见的地方，没有反馈用户根本不知道复制成没成功。标准做法是 `onSuccess` 里接一个 `showToast('已复制')`——比改按钮文案更即时，也不会打断下一次复制。
+::: tip 复制成功一定有反馈
+剪贴板是用户看不见的地方，没有反馈用户根本不知道复制成没成功。`v-copy` **默认自带**「复制成功」消息条，不需要自己写 `onSuccess` 弹 toast；想要不同文案传 `feedback: '口令已复制'`，想完全自己接管传 `feedback: false`。
 :::
 
 ## 实现细节
