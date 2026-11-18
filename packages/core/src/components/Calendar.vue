@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { toCssSize } from '../utils'
 import JmIcon from './Icon.vue'
+import JmPopup from './Popup.vue'
 import Picker from './Picker.vue'
 import type {
   CalendarDay,
@@ -50,6 +51,12 @@ const props = withDefaults(
     switchMode?: CalendarSwitchMode
     /** 自定义月份标题文案（默认「YYYY年M月」） */
     format?: (date: Date) => string
+    /** 弹出模式：包一层底部弹层（像 ActionSheet 一样滑出），配合 v-model:show */
+    poppable?: boolean
+    /** 弹层显隐（poppable 时使用） */
+    show?: boolean
+    /** 弹层挂载目标：false 就地渲染（嵌手机模拟框等容器场景），字符串/元素为指定容器，默认 body */
+    teleport?: boolean | string | Element
   }>(),
   {
     type: 'single',
@@ -63,14 +70,18 @@ const props = withDefaults(
     readonly: false,
     allowSameDay: true,
     switchMode: 'none',
+    poppable: false,
+    show: false,
+    teleport: true,
   },
 )
 
 const emit = defineEmits<{
   'update:modelValue': [value: Date | Date[]]
+  'update:show': [value: boolean]
   select: [date: Date]
   confirm: [value: Date | Date[]]
-  /** 当前展示的月份变化（箭头、横滑、月份面板都会触发） */
+  /** 当前展示的月份变化（箭头、滚动、月份面板都会触发） */
   'month-change': [month: Date]
 }>()
 
@@ -88,8 +99,33 @@ function parseDate(v: Date | string | undefined): Date | undefined {
   return startOfDay(d)
 }
 
-const min = computed(() => parseDate(props.minDate))
-const max = computed(() => parseDate(props.maxDate))
+/* min/max 同时是滚动边界；不传时默认前后各 6 个月（对齐 Vant / TDesign） */
+const min = computed(() => {
+  const d = parseDate(props.minDate)
+  if (d) return d
+  const t = new Date()
+  return new Date(t.getFullYear(), t.getMonth() - 6, 1)
+})
+
+const max = computed(() => {
+  const d = parseDate(props.maxDate)
+  if (d) return d
+  const t = new Date()
+  return new Date(t.getFullYear(), t.getMonth() + 6, t.getDate())
+})
+
+/* 可滚动月份列表：min ~ max 之间的每一个月 */
+const months = computed<Date[]>(() => {
+  const list: Date[] = []
+  const start = new Date(min.value.getFullYear(), min.value.getMonth(), 1)
+  const end = new Date(max.value.getFullYear(), max.value.getMonth(), 1)
+  for (let d = new Date(start); d <= end; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+    list.push(new Date(d))
+    if (list.length > 1200) break // 防御性上限（100 年），正常业务到不了
+  }
+  if (!list.length) list.push(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+  return list
+})
 
 /* ---------------- 选中值 ---------------- */
 function normalize(value: CalendarValue | undefined): Date[] {
@@ -108,17 +144,35 @@ watch(
   { deep: true },
 )
 
-const currentMonth = ref<Date>(addMonths(selected.value[0] ?? new Date(), 0))
+/* 把任意日期钳制进可滚动月份区间 */
+function clampToRange(d: Date): Date {
+  const lo = new Date(min.value.getFullYear(), min.value.getMonth(), 1)
+  const hi = new Date(max.value.getFullYear(), max.value.getMonth(), 1)
+  const t = new Date(d.getFullYear(), d.getMonth(), 1)
+  if (t < lo) return lo
+  if (t > hi) return hi
+  return t
+}
 
-/* 选中值变化时若跨月，跟着翻到那一页 */
+const currentMonth = ref<Date>(clampToRange(selected.value[0] ?? new Date()))
+
+/* 选中值变化时若跨月，滚动到那一页 */
 watch(
   () => selected.value[0],
   (d) => {
     if (d && (d.getMonth() !== currentMonth.value.getMonth() || d.getFullYear() !== currentMonth.value.getFullYear())) {
-      currentMonth.value = addMonths(d, 0)
+      scrollToMonth(d)
     }
   },
 )
+
+/* min/max 变化后当前月可能落在区间外：钳回范围内 */
+watch(months, (list) => {
+  const inside = list.some(
+    (m) => m.getFullYear() === currentMonth.value.getFullYear() && m.getMonth() === currentMonth.value.getMonth(),
+  )
+  if (!inside) currentMonth.value = clampToRange(currentMonth.value)
+})
 
 /* 展示月份变化统一从这里派发 */
 watch(currentMonth, (m) => {
@@ -144,9 +198,7 @@ const monthLabel = computed(() => {
   return `${currentMonth.value.getFullYear()}年${currentMonth.value.getMonth() + 1}月`
 })
 
-const days = computed<CalendarDay[]>(() => {
-  const y = currentMonth.value.getFullYear()
-  const m = currentMonth.value.getMonth()
+function buildDays(y: number, m: number): CalendarDay[] {
   const first = new Date(y, m, 1)
   const offset = (first.getDay() - props.firstDayOfWeek + 7) % 7
   const gridStart = addDays(first, -offset)
@@ -188,7 +240,12 @@ const days = computed<CalendarDay[]>(() => {
     }
     return day
   })
-})
+}
+
+/* 每个月一份数据；固定渲染 42 格（6 行），所有月份高度一致 */
+const allMonthDays = computed<CalendarDay[][]>(() =>
+  months.value.map((m) => buildDays(m.getFullYear(), m.getMonth())),
+)
 
 /* ---------------- 交互 ---------------- */
 function pick(day: CalendarDay, e?: Event) {
@@ -237,36 +294,160 @@ function onConfirm() {
   emitValue()
   if (props.type === 'single') {
     if (selected.value[0]) emit('confirm', selected.value[0])
-    return
+  } else {
+    emit('confirm', selected.value.slice())
   }
-  emit('confirm', selected.value.slice())
+  /* 弹出模式下确认即收起 */
+  if (props.poppable) emit('update:show', false)
 }
 
-/* ---------------- 翻页（带方向滑动） ---------------- */
-const slideName = ref<'jm-cal-next' | 'jm-cal-prev'>('jm-cal-next')
+/* ---------------- 弹出模式（复用 Popup 底部弹层） ---------------- */
+const popupBindings = computed(() =>
+  props.poppable
+    ? {
+        show: props.show,
+        position: 'bottom' as const,
+        round: true,
+        closeable: true,
+        teleport: props.teleport,
+        safeArea: true,
+      }
+    : {},
+)
 
-/** 跳到指定月份（按新旧月份差决定滑动方向） */
-function jumpToMonth(target: Date) {
-  const cur = currentMonth.value
-  const diff =
-    (target.getFullYear() - cur.getFullYear()) * 12 + (target.getMonth() - cur.getMonth())
-  if (diff === 0) return
-  slideName.value = diff > 0 ? 'jm-cal-next' : 'jm-cal-prev'
-  // Date 是原生对象，原地 setTime 不会触发响应式，必须换新对象
-  currentMonth.value = addMonths(cur, diff)
+function onPopupShow(v: boolean) {
+  emit('update:show', v)
+}
+
+watch(
+  () => props.show,
+  (v) => {
+    if (!props.poppable || typeof document === 'undefined' || !v) return
+    /* 打开即同步渲染并定位到目标月：内容不是等动画结束才挂载、
+       scrollTop 在首帧就位。iOS WebView 上「先开弹层、再异步渲染滚动区」
+       会出现首帧空白、要滑一下才画出来的问题——这里全部提前做掉。 */
+    nextTick(() => {
+      measureMonthHeight()
+      scrollToMonth(clampToRange(selected.value[0] ?? new Date()))
+    })
+  },
+  { immediate: true },
+)
+
+/* ---------------- 月份纵向滚动（Vant / TDesign 式连续滚月） ---------------- */
+const scrollerRef = ref<HTMLElement | null>(null)
+/* 每月高度：6 行（42 格）+ 底部留白（--jm-space-2）。挂载后用实测值校正 */
+const monthHeight = ref(392)
+const visibleIndex = ref(0)
+
+/* 月份过多时只渲染可视区附近，其余用占位高度撑起；
+   每月固定 42 格 → 高度恒定，占位与实高的换算是精确的，滚动不会跳 */
+const RENDER_ALL_LIMIT = 30
+const WINDOW_PAD = 5
+const isWindowed = computed(() => months.value.length > RENDER_ALL_LIMIT)
+
+const windowStartIndex = computed(() =>
+  isWindowed.value ? Math.max(0, visibleIndex.value - WINDOW_PAD) : 0,
+)
+
+const renderedMonths = computed(() => {
+  const all = months.value
+  const allDays = allMonthDays.value
+  if (!isWindowed.value) return all.map((m, i) => ({ index: i, month: m, days: allDays[i] }))
+  const end = Math.min(all.length - 1, visibleIndex.value + WINDOW_PAD)
+  const list: { index: number; month: Date; days: CalendarDay[] }[] = []
+  for (let i = windowStartIndex.value; i <= end; i++) {
+    list.push({ index: i, month: all[i], days: allDays[i] })
+  }
+  return list
+})
+
+const topPadHeight = computed(() => windowStartIndex.value * monthHeight.value)
+const bottomPadHeight = computed(() =>
+  Math.max(0, (months.value.length - 1 - (visibleIndex.value + WINDOW_PAD)) * monthHeight.value),
+)
+
+function estimateMonthHeight(): number {
+  const rh =
+    typeof props.rowHeight === 'number' ? props.rowHeight : parseFloat(String(props.rowHeight)) || 64
+  return Math.round(rh * 6) + 8
+}
+
+function measureMonthHeight() {
+  const el = scrollerRef.value?.querySelector<HTMLElement>('.jm-calendar__month')
+  monthHeight.value = el?.offsetHeight || estimateMonthHeight()
+}
+
+onMounted(() => {
+  nextTick(() => {
+    measureMonthHeight()
+    /* 内联模式：挂载即定位到当前月（否则永远停在第一页，副标题和内容对不上） */
+    scrollToMonth(currentMonth.value)
+  })
+})
+watch(() => props.rowHeight, () => nextTick(measureMonthHeight))
+
+/** 滚动到指定月份；smooth 仅用于箭头按钮（尊重减弱动态偏好） */
+function scrollToMonth(target: Date, smooth = false) {
+  const t = new Date(target.getFullYear(), target.getMonth(), 1)
+  const idx = months.value.findIndex(
+    (m) => m.getFullYear() === t.getFullYear() && m.getMonth() === t.getMonth(),
+  )
+  if (idx < 0) return
+  visibleIndex.value = idx
+  const m = months.value[idx]
+  if (m) currentMonth.value = m
+
+  const el = scrollerRef.value
+  if (!el) return
+  let top = idx * monthHeight.value
+  if (!isWindowed.value) {
+    const sec = el.querySelector<HTMLElement>(`.jm-calendar__month[data-mi="${idx}"]`)
+    if (sec) top = sec.offsetTop
+  }
+  const reduced =
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  el.scrollTo({ top, behavior: smooth && !reduced ? 'smooth' : 'auto' })
 }
 
 function prevMonth() {
-  jumpToMonth(addMonths(currentMonth.value, -1))
+  scrollToMonth(addMonths(currentMonth.value, -1), true)
 }
 
 function nextMonth() {
-  jumpToMonth(addMonths(currentMonth.value, 1))
+  scrollToMonth(addMonths(currentMonth.value, 1), true)
 }
 
 function goToday() {
-  jumpToMonth(addMonths(new Date(), 0))
+  scrollToMonth(new Date())
 }
+
+/* 滚动过程中同步当前月份（副标题跟随可视月份变化） */
+let scrollRaf = 0
+
+function onScroll() {
+  if (scrollRaf) return
+  scrollRaf = requestAnimationFrame(() => {
+    scrollRaf = 0
+    const el = scrollerRef.value
+    if (!el || !monthHeight.value) return
+    const total = months.value.length
+    const idx = Math.min(total - 1, Math.max(0, Math.round(el.scrollTop / monthHeight.value)))
+    visibleIndex.value = idx
+    const m = months.value[idx]
+    if (
+      m &&
+      (m.getFullYear() !== currentMonth.value.getFullYear() ||
+        m.getMonth() !== currentMonth.value.getMonth())
+    ) {
+      currentMonth.value = m
+    }
+  })
+}
+
+onBeforeUnmount(() => {
+  if (scrollRaf) cancelAnimationFrame(scrollRaf)
+})
 
 /* ---------------- 月份 / 年月面板 ---------------- */
 const panelVisible = ref(false)
@@ -301,54 +482,54 @@ function onPanelConfirm() {
     props.switchMode === 'year-month' ? Number(vals[0]) : currentMonth.value.getFullYear()
   const month = Number(vals[vals.length - 1])
   panelVisible.value = false
-  jumpToMonth(new Date(year, month - 1, 1))
+  scrollToMonth(new Date(year, month - 1, 1))
 }
 
-/* 横滑翻月 + 触摸轻点：主体区域左右滑切换月份；
+/* 横滑翻月 + 触摸轻点：主体区域左右滑切换月份，上下滑交给原生滚动连续翻月；
    触摸轻点在 pointerup 自行派发并锁定按下的那一天——部分内嵌 WebView
    对带漂移的轻点会丢失 click 或把 click 落到相邻格，导致「点了没反应
    / 选到隔壁」，所以原生 click 只留给鼠标与键盘。 */
 let swipeStart: { x: number; y: number } | null = null
-let pressIndex = -1
+let pressCell = ''
 
-function dayIndexFromEvent(e: Event): number {
+function cellKeyFromEvent(e: Event): string {
   const el = (e.target as HTMLElement)?.closest?.('.jm-calendar__day') as HTMLElement | null
-  const i = el?.getAttribute('data-day-index')
-  return i === null || i === undefined ? -1 : Number(i)
+  return el?.getAttribute('data-cell') ?? ''
 }
 
 function onBodyPointerDown(e: PointerEvent) {
   if (e.pointerType === 'mouse' && e.button !== 0) return
   swipeStart = { x: e.clientX, y: e.clientY }
-  pressIndex = dayIndexFromEvent(e)
+  pressCell = cellKeyFromEvent(e)
 }
 
 function onBodyPointerUp(e: PointerEvent) {
   if (!swipeStart) return
   const dx = e.clientX - swipeStart.x
   const dy = e.clientY - swipeStart.y
-  const idx = pressIndex
+  const key = pressCell
   swipeStart = null
-  pressIndex = -1
+  pressCell = ''
 
-  /* 横滑翻月：位移足够且横向占优 */
+  /* 横滑翻月：位移足够且横向占优；纵滑是原生滚动，不在这里处理 */
   if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-    jumpToMonth(addMonths(currentMonth.value, dx < 0 ? 1 : -1))
+    scrollToMonth(addMonths(currentMonth.value, dx < 0 ? 1 : -1))
     return
   }
 
   /* 轻点：纵向基本没动、横向未到翻页阈值 → 选中按下位置的那一天。
      目标取 pointerdown 的格子，容差内漂移不换目标；随后浏览器补发的
      touch click 会在 pick 里被 pointerType 守卫拦掉，不会二次翻转。 */
-  if (e.pointerType !== 'mouse' && Math.abs(dy) <= 10 && Math.abs(dx) <= 48 && idx >= 0) {
-    const day = days.value[idx]
+  if (e.pointerType !== 'mouse' && Math.abs(dy) <= 10 && Math.abs(dx) <= 48 && key) {
+    const [mi, di] = key.split(':').map(Number)
+    const day = allMonthDays.value[mi]?.[di]
     if (day) pick(day)
   }
 }
 
 function onBodyPointerCancel() {
   swipeStart = null
-  pressIndex = -1
+  pressCell = ''
 }
 
 /* ---------------- 文案 ---------------- */
@@ -379,129 +560,149 @@ const styles = computed(() => {
   return s
 })
 
-defineExpose({ currentMonth, selected, prevMonth, nextMonth, goToday, openMonthPanel })
+defineExpose({
+  currentMonth,
+  selected,
+  prevMonth,
+  nextMonth,
+  goToday,
+  openMonthPanel,
+  /** 滚动到指定月份（业务侧切换展示月） */
+  scrollToMonth,
+})
 </script>
 
 <template>
-  <div
-    class="jm-calendar"
-    :class="{ 'is-square': shape === 'square', 'is-readonly': readonly }"
-    :style="styles"
-  >
-    <div v-if="showTitle || showSubtitle" class="jm-calendar__header">
-      <div v-if="showTitle" class="jm-calendar__title">{{ title || '选择日期' }}</div>
+  <component :is="poppable ? JmPopup : 'div'" v-bind="popupBindings" @update:show="onPopupShow">
+    <div
+      class="jm-calendar"
+      :class="{ 'is-square': shape === 'square', 'is-readonly': readonly, 'is-poppable': poppable }"
+      :style="styles"
+    >
+      <div v-if="showTitle || showSubtitle" class="jm-calendar__header">
+        <div v-if="showTitle" class="jm-calendar__title">{{ title || '选择日期' }}</div>
 
-      <div v-if="showSubtitle" class="jm-calendar__subtitle">
-        <button type="button" class="jm-calendar__arrow" aria-label="上个月" @click="prevMonth">
-          <jm-icon name="chevron-left" size="20px" :stroke-width="2" />
-        </button>
-        <button
-          v-if="switchMode !== 'none'"
-          type="button"
-          class="jm-calendar__month is-switchable"
-          :disabled="readonly"
-          @click="openMonthPanel"
-        >
-          <span class="jm-calendar__month-text">{{ monthLabel }}</span>
-          <jm-icon name="chevron-down" size="14px" :stroke-width="2" />
-        </button>
-        <span v-else class="jm-calendar__month">{{ monthLabel }}</span>
-        <button type="button" class="jm-calendar__arrow" aria-label="下个月" @click="nextMonth">
-          <jm-icon name="chevron-right" size="20px" :stroke-width="2" />
-        </button>
+        <div v-if="showSubtitle" class="jm-calendar__subtitle">
+          <button type="button" class="jm-calendar__arrow" aria-label="上个月" @click="prevMonth">
+            <jm-icon name="chevron-left" size="20px" :stroke-width="2" />
+          </button>
+          <button
+            v-if="switchMode !== 'none'"
+            type="button"
+            class="jm-calendar__month is-switchable"
+            :disabled="readonly"
+            @click="openMonthPanel"
+          >
+            <span class="jm-calendar__month-text">{{ monthLabel }}</span>
+            <jm-icon name="chevron-down" size="14px" :stroke-width="2" />
+          </button>
+          <span v-else class="jm-calendar__month">{{ monthLabel }}</span>
+          <button type="button" class="jm-calendar__arrow" aria-label="下个月" @click="nextMonth">
+            <jm-icon name="chevron-right" size="20px" :stroke-width="2" />
+          </button>
+        </div>
+
+        <div v-if="summary" class="jm-calendar__summary">{{ summary }}</div>
+
+        <!-- 月份面板：锚定在标题行下方，不依赖弹层挂载，任何容器内定位都正确 -->
+        <Transition name="jm-cal-panel">
+          <div
+            v-if="panelVisible && switchMode !== 'none'"
+            class="jm-calendar__panel"
+            role="dialog"
+            aria-label="选择月份"
+          >
+            <div class="jm-calendar__panel-toolbar">
+              <button type="button" class="jm-calendar__panel-action" @click="panelVisible = false">
+                取消
+              </button>
+              <span class="jm-calendar__panel-title">
+                {{ switchMode === 'year-month' ? '选择年月' : '选择月份' }}
+              </span>
+              <button
+                type="button"
+                class="jm-calendar__panel-action is-confirm"
+                @click="onPanelConfirm"
+              >
+                确认
+              </button>
+            </div>
+            <jm-picker
+              v-model="panelValues"
+              :columns="panelColumns"
+              :show-toolbar="false"
+              :item-height="40"
+              :visible-count="5"
+            />
+          </div>
+        </Transition>
       </div>
 
-      <div v-if="summary" class="jm-calendar__summary">{{ summary }}</div>
-
-      <!-- 月份面板：锚定在标题行下方，不依赖弹层挂载，任何容器内定位都正确 -->
-      <Transition name="jm-cal-panel">
-        <div
-          v-if="panelVisible && switchMode !== 'none'"
-          class="jm-calendar__panel"
-          role="dialog"
-          aria-label="选择月份"
-        >
-          <div class="jm-calendar__panel-toolbar">
-            <button type="button" class="jm-calendar__panel-action" @click="panelVisible = false">
-              取消
-            </button>
-            <span class="jm-calendar__panel-title">
-              {{ switchMode === 'year-month' ? '选择年月' : '选择月份' }}
-            </span>
-            <button
-              type="button"
-              class="jm-calendar__panel-action is-confirm"
-              @click="onPanelConfirm"
-            >
-              确认
-            </button>
-          </div>
-          <jm-picker
-            v-model="panelValues"
-            :columns="panelColumns"
-            :show-toolbar="false"
-            :item-height="40"
-            :visible-count="5"
-          />
+      <div class="jm-calendar__body">
+        <div class="jm-calendar__weekdays">
+          <span v-for="w in weekDays" :key="w" class="jm-calendar__weekday">{{ w }}</span>
         </div>
-      </Transition>
-    </div>
 
-    <div
-      class="jm-calendar__body"
-      @pointerdown="onBodyPointerDown"
-      @pointerup="onBodyPointerUp"
-      @pointercancel="onBodyPointerCancel"
-    >
-      <Transition :name="slideName">
+        <!-- 月份连续滚动区：min ~ max 之间的每个月都在文档流里，
+             上下滑直接翻月；超长区间只渲染可视区附近（占位高度精确） -->
         <div
-          :key="`${currentMonth.getFullYear()}-${currentMonth.getMonth()}`"
-          class="jm-calendar__page"
+          ref="scrollerRef"
+          class="jm-calendar__viewport"
+          @scroll="onScroll"
+          @pointerdown="onBodyPointerDown"
+          @pointerup="onBodyPointerUp"
+          @pointercancel="onBodyPointerCancel"
         >
-          <div class="jm-calendar__weekdays">
-            <span v-for="w in weekDays" :key="w" class="jm-calendar__weekday">{{ w }}</span>
+          <div v-if="topPadHeight > 0" class="jm-calendar__pad" :style="{ height: topPadHeight + 'px' }" />
+          <div
+            v-for="item in renderedMonths"
+            :key="`${item.month.getFullYear()}-${item.month.getMonth()}`"
+            class="jm-calendar__month"
+            :data-mi="item.index"
+            :style="isWindowed ? { height: monthHeight + 'px' } : undefined"
+          >
+            <div class="jm-calendar__days">
+              <button
+                v-for="(day, di) in item.days"
+                :key="di"
+                type="button"
+                class="jm-calendar__day"
+                :data-cell="`${item.index}:${di}`"
+                :class="[
+                  `is-${day.type}`,
+                  day.className,
+                  {
+                    'is-selected': day.selected,
+                    'is-in-range': day.inRange,
+                    'is-range-start': day.isStart,
+                    'is-range-end': day.isEnd,
+                    'is-disabled': day.disabled,
+                    'is-today': day.today,
+                  },
+                ]"
+                :disabled="day.disabled"
+                @click="pick(day, $event)"
+              >
+                <span class="jm-calendar__day-main">
+                  <span class="jm-calendar__day-text">{{ day.text }}</span>
+                </span>
+                <span v-if="day.topInfo" class="jm-calendar__day-info is-top">{{ day.topInfo }}</span>
+                <!-- 下方备注常驻占位：没有备注也撑住行高，所有格子的数字基线保持一致 -->
+                <span class="jm-calendar__day-info is-bottom">{{ day.bottomInfo }}</span>
+              </button>
+            </div>
           </div>
-
-          <div class="jm-calendar__days">
-            <button
-              v-for="(day, i) in days"
-              :key="i"
-              type="button"
-              class="jm-calendar__day"
-              :data-day-index="i"
-              :class="[
-                `is-${day.type}`,
-                day.className,
-                {
-                  'is-selected': day.selected,
-                  'is-in-range': day.inRange,
-                  'is-range-start': day.isStart,
-                  'is-range-end': day.isEnd,
-                  'is-disabled': day.disabled,
-                  'is-today': day.today,
-                },
-              ]"
-              :disabled="day.disabled"
-              @click="pick(day, $event)"
-            >
-              <span class="jm-calendar__day-main">
-                <span class="jm-calendar__day-text">{{ day.text }}</span>
-              </span>
-              <span v-if="day.topInfo" class="jm-calendar__day-info is-top">{{ day.topInfo }}</span>
-              <!-- 下方备注常驻占位：没有备注也撑住行高，所有格子的数字基线保持一致 -->
-              <span class="jm-calendar__day-info is-bottom">{{ day.bottomInfo }}</span>
-            </button>
-          </div>
+          <div v-if="bottomPadHeight > 0" class="jm-calendar__pad" :style="{ height: bottomPadHeight + 'px' }" />
         </div>
-      </Transition>
-    </div>
+      </div>
 
-    <div v-if="showConfirm" class="jm-calendar__footer">
-      <button type="button" class="jm-calendar__confirm" @click="onConfirm">{{ confirmLabel }}</button>
-    </div>
+      <div v-if="showConfirm" class="jm-calendar__footer">
+        <button type="button" class="jm-calendar__confirm" @click="onConfirm">{{ confirmLabel }}</button>
+      </div>
 
-    <div v-if="panelVisible" class="jm-calendar__panel-mask" @click="panelVisible = false" />
-  </div>
+      <div v-if="panelVisible" class="jm-calendar__panel-mask" @click="panelVisible = false" />
+    </div>
+  </component>
 </template>
 
 <style>
@@ -580,68 +781,37 @@ button.jm-calendar__month {
   background: var(--jm-bg-hover);
 }
 
-/* 翻月滑动容器 */
+/* 滚动容器：星期表头固定在上，月份列表纵向连续滚动（Vant/TDesign 式） */
 .jm-calendar__body {
   position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+}
+
+.jm-calendar__viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* 内联模式默认一屏一个月（6 行）；poppable 用固定高度多露内容提示可滚 */
+  height: calc(var(--jm-calendar-row-height) * 6 + 8px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   touch-action: pan-y;
+  /* iOS WebView：强制合成层 + 原生惯性，避免弹出首帧滚动区不绘制（要滑一下才出来） */
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
 }
 
-.jm-calendar__page {
-  background: inherit;
-  touch-action: pan-y;
+.jm-calendar.is-poppable .jm-calendar__viewport {
+  height: min(58vh, 440px);
 }
 
-/* 翻页动画：整页左右滑入滑出，离场页 absolute 叠放 */
-.jm-cal-next-enter-active,
-.jm-cal-next-leave-active,
-.jm-cal-prev-enter-active,
-.jm-cal-prev-leave-active {
-  transition:
-    transform 0.28s var(--jm-motion-transition-ease),
-    opacity 0.28s var(--jm-motion-transition-ease);
+.jm-calendar__month {
+  position: relative;
 }
 
-.jm-cal-next-leave-active,
-.jm-cal-prev-leave-active {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-}
-
-.jm-cal-next-enter-from {
-  transform: translateX(100%);
-}
-
-.jm-cal-next-leave-to {
-  transform: translateX(-28%);
-  opacity: 0;
-}
-
-.jm-cal-prev-enter-from {
-  transform: translateX(-100%);
-}
-
-.jm-cal-prev-leave-to {
-  transform: translateX(28%);
-  opacity: 0;
-}
-
-[data-motion='off'] .jm-cal-next-enter-active,
-[data-motion='off'] .jm-cal-next-leave-active,
-[data-motion='off'] .jm-cal-prev-enter-active,
-[data-motion='off'] .jm-cal-prev-leave-active {
-  transition: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .jm-cal-next-enter-active,
-  .jm-cal-next-leave-active,
-  .jm-cal-prev-enter-active,
-  .jm-cal-prev-leave-active {
-    transition: none;
-  }
+.jm-calendar__pad {
+  pointer-events: none;
 }
 
 .jm-calendar__summary {
@@ -650,8 +820,9 @@ button.jm-calendar__month {
   font-size: var(--jm-font-size-xs);
 }
 
-/* 星期表头 */
+/* 星期表头：固定在滚动区上方，不随月份滚动 */
 .jm-calendar__weekdays {
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   padding: 0 var(--jm-space-2);
