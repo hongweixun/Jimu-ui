@@ -11,7 +11,7 @@ Jimu UI 的水波纹参照 [Varlet UI](https://www.varletjs.com/) 的算法实�
 
 ## 基础用法
 
-`v-ripple` 是一个指令，挂在任意元素上即可。宿主元素需要能裁剪溢出，指令会在首次交互时自动补上 `position: relative` 与 `overflow: hidden`。
+`v-ripple` 是一个指令，挂在任意元素上即可。宿主元素需要能裁剪溢出，指令在挂载时自动补上 `position: relative` 与 `overflow: hidden`。
 
 <DemoBlock src="/demos/ripple/basic.vue" title="指令用法" desc="不传参数时水波颜色取 currentColor：深色按钮上是白波，浅色元素上是深色波。" />
 
@@ -48,11 +48,13 @@ Jimu UI 的水波纹参照 [Varlet UI](https://www.varletjs.com/) 的算法实�
 | 淡出 | `140ms` linear | 比扩散短，退场不糊手 |
 | 透明度 | `0.25` | 深色文字上用 0.25 是 Material 的经典值；Cell/ActionSheet 这类大面积元素降到 0.1~0.12 |
 
-## 移动端的三个细节
+## 移动端的五个细节
 
-1. **滑动不触发**：按下后手指位移超过 8px 判定为滚动，立即丢弃水波并淡出。列表里滚动不会满屏闪波。
-2. **起手延迟 24ms**：进一步区分"按下"和"开始滑动"，快速点击感知不到这个延迟。
-3. **动效可关**：`data-motion="off"` 或系统 `prefers-reduced-motion` 下**根本不创建 DOM 节点**，不是靠动画时长归零糊过去。
+1. **按下即有波**：`pointerdown` 当帧立即创建水波，没有延迟窗口——再快的轻点也能看到完整扩散。抬手时按最短停留 180ms 补足展示时长。
+2. **轻微抖动不算滑动**：位移容差 12px，覆盖真机手指落地时的自然抖动；超过容差判定为滚动，波纹**快速淡出**（不硬删，不会闪断）。列表滚动不会满屏闪波。
+3. **滚动接管立即收尾**：浏览器接管滚动（`pointercancel`）时波纹 90ms 内淡出，不会挂在按钮上。
+4. **内核兼容**：不支持 PointerEvent 的老内核（部分 iOS WebView）自动降级到 touch / mouse 事件，行为一致。
+5. **动效可关**：`data-motion="off"` 或系统 `prefers-reduced-motion` 下**根本不创建 DOM 节点**，不是靠动画时长归零糊过去。
 
 ## 自定义
 

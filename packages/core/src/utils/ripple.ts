@@ -3,19 +3,26 @@ import type { Directive, DirectiveBinding } from 'vue'
 /**
  * 水波纹（Ripple）
  * ---------------------------------------------------------------------------
- * 触感参照 Varlet UI 的实现，尺寸与位移算法与之一致：
+ * 几何与 Varlet 一致：
  *   半径 = √(w² + h²) / 2（对角线一半，保证扩散后必然盖满整个元素）
  *   起点 = 触点坐标 - 半径；终点 = 元素居中位置；缩放从 0.3 到 1
  *
- * 与 Varlet 的差异（都是移动端体感取舍，不是随意改）：
- *   1. Varlet 只监听 touchstart，桌面调试时鼠标点不出效果。这里统一用 pointerdown，
- *      触屏/鼠标/手写笔一套代码，也便于文档站的 PC 预览。
- *   2. Varlet 起手延迟 30ms 再创建，靠 touchmove 取消。这里同一套思路但用 pointer 事件，
- *      滑动超过 8px 直接丢弃 —— 列表滚动时不会闪出一片水波。
- *   3. 动画时长、缓动、颜色、透明度全部走 CSS 令牌，因此 data-motion="off" 与
- *      prefers-reduced-motion 天然生效（且关闭时根本不创建 DOM）。
+ * 真机上的历史问题（0.25.9 及之前）：
+ *   旧实现按下后延迟 24ms 才创建波纹，靠"还没到位就抬手/开始滑"取消它。
+ *   真机上快速轻点（< 24ms 抬手）与轻微手指抖动（> 8px）都会命中取消路径，
+ *   结果是「按钮 :active 压暗了、click 也触发了，但根本没有波纹」——
+ *   用户看到的就是"有时候有、有时候只有底色变了一下"。
  *
- * 契约：宿主元素需要能裁剪溢出，模块会在首次交互时补上 position: relative + overflow: hidden。
+ * 现在的策略（按下即有，绝不丢反馈）：
+ *   1. pointerdown 当帧立即创建波纹，不再有延迟窗口 —— 任何真实按压必出水波；
+ *   2. 位移容差放宽到 12px，覆盖真机手指落地时的自然抖动；
+ *   3. 超过容差（判定为滑动）或 pointercancel（浏览器接管滚动）时，
+ *      波纹不硬删，而是立即快速淡出 —— 列表滚动不会留下明显水波；
+ *   4. 抬手时按 MIN_HOLD 补足最短展示时长，极快点也能看到完整扩散；
+ *   5. 不支持 PointerEvent 的内核（部分老 iOS / 内嵌 WebView）自动降级到
+ *      touch / mouse 事件，行为一致 —— 这类环境此前是完全没有任何波纹的。
+ *
+ * 契约：宿主元素需要能裁剪溢出，模块在挂载时补上 position: relative + overflow: hidden。
  */
 
 export interface RippleOptions {
@@ -30,14 +37,17 @@ export interface RippleOptions {
 const CLASS = 'jm-ripple'
 const VISIBLE = 'is-visible'
 const FADING = 'is-fading'
-/** 手指位移超过该值视为滑动，放弃水波纹 */
-const MOVE_TOLERANCE = 8
-/** 起手延迟，用来区分"按下"和"开始滚动" */
-const START_DELAY = 24
+/** 手指位移超过该值视为滑动，放弃波纹（12px：覆盖真机手指落地抖动） */
+const MOVE_TOLERANCE = 12
 /** 扩散完成后至少停留的时长，快速点击才能看到完整波纹 */
 const MIN_HOLD = 180
 /** transitionend 的兜底（关闭动效时事件可能不触发） */
 const FADE_FALLBACK = 260
+
+interface ActiveRipple {
+  el: HTMLElement
+  born: number
+}
 
 function normalize(value: RippleOptions | boolean | undefined | null): RippleOptions {
   if (value === true) return {}
@@ -58,17 +68,25 @@ function ensureClip(host: HTMLElement) {
 }
 
 class Ripple {
-  private startTimer: number | null = null
-  private active: Array<{ el: HTMLElement; born: number }> = []
+  private active: ActiveRipple[] = []
   private startPoint = { x: 0, y: 0 }
+  private pointerId: number | null = null
   private options: RippleOptions
+  private hasPointer = typeof window !== 'undefined' && 'PointerEvent' in window
 
   constructor(
     private host: HTMLElement,
     options: RippleOptions,
   ) {
     this.options = options
-    host.addEventListener('pointerdown', this.onPointerdown, { passive: true })
+    /* 裁剪能力在挂载时就位：首次点击不用再做一次 getComputedStyle + 样式重算 */
+    ensureClip(host)
+    if (this.hasPointer) {
+      host.addEventListener('pointerdown', this.onPointerdown, { passive: true })
+    } else {
+      host.addEventListener('touchstart', this.onTouchstart, { passive: true })
+      host.addEventListener('mousedown', this.onMousedown)
+    }
     host.addEventListener('keydown', this.onKeydown)
   }
 
@@ -76,68 +94,123 @@ class Ripple {
     this.options = options
   }
 
-  private onPointerdown = (e: PointerEvent) => {
-    this.startPoint = { x: e.clientX, y: e.clientY }
-    window.addEventListener('pointermove', this.onPointermove, { passive: true })
-    window.addEventListener('pointerup', this.onRelease, { passive: true })
-    window.addEventListener('pointercancel', this.onRelease, { passive: true })
-    this.schedule(e.clientX, e.clientY)
+  /* ---------------- 按下即创建 ---------------- */
+
+  private begin(x: number, y: number) {
+    this.startPoint = { x, y }
+    this.spawn(x, y)
   }
+
+  private onPointerdown = (e: PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    this.pointerId = e.pointerId
+    window.addEventListener('pointermove', this.onPointermove, { passive: true })
+    window.addEventListener('pointerup', this.onPointerup, { passive: true })
+    window.addEventListener('pointercancel', this.onPointercancel, { passive: true })
+    this.begin(e.clientX, e.clientY)
+  }
+
+  private onPointermove = (e: PointerEvent) => {
+    if (this.pointerId !== null && e.pointerId !== this.pointerId) return
+    this.trackMove(e.clientX, e.clientY)
+  }
+
+  private onPointerup = () => {
+    this.cleanupWindowListeners()
+    this.release(false)
+  }
+
+  private onPointercancel = () => {
+    this.cleanupWindowListeners()
+    /* 浏览器接管滚动（真机滚动列表里按下再滑）：快速淡出，不留长尾 */
+    this.release(true)
+  }
+
+  /* ---------------- 无 PointerEvent 内核的降级路径 ---------------- */
+
+  private onTouchstart = (e: TouchEvent) => {
+    const t = e.touches[0]
+    if (!t) return
+    this.pointerId = t.identifier
+    window.addEventListener('touchmove', this.onTouchmove, { passive: true })
+    window.addEventListener('touchend', this.onTouchend, { passive: true })
+    window.addEventListener('touchcancel', this.onTouchcancel, { passive: true })
+    this.begin(t.clientX, t.clientY)
+  }
+
+  private onTouchmove = (e: TouchEvent) => {
+    const t = [...e.touches].find((p) => p.identifier === this.pointerId) ?? e.touches[0]
+    if (!t) return
+    this.trackMove(t.clientX, t.clientY)
+  }
+
+  private onTouchend = () => {
+    this.cleanupWindowListeners()
+    this.release(false)
+  }
+
+  private onTouchcancel = () => {
+    this.cleanupWindowListeners()
+    this.release(true)
+  }
+
+  private onMousedown = (e: MouseEvent) => {
+    if (e.button !== 0) return
+    window.addEventListener('mousemove', this.onMousemove)
+    window.addEventListener('mouseup', this.onMouseup)
+    this.begin(e.clientX, e.clientY)
+  }
+
+  private onMousemove = (e: MouseEvent) => this.trackMove(e.clientX, e.clientY)
+
+  private onMouseup = () => {
+    this.cleanupWindowListeners()
+    this.release(false)
+  }
+
+  /* ---------------- 键盘 ---------------- */
 
   private onKeydown = (e: KeyboardEvent) => {
     if (e.key !== 'Enter' && e.key !== ' ') return
     if (e.repeat) return
     this.host.addEventListener('keyup', this.onKeyup)
     this.host.addEventListener('blur', this.onKeyup)
-    this.schedule()
+    this.spawn()
   }
 
   private onKeyup = () => {
     this.host.removeEventListener('keyup', this.onKeyup)
     this.host.removeEventListener('blur', this.onKeyup)
-    this.release()
+    this.release(false)
   }
 
-  private onPointermove = (e: PointerEvent) => {
-    const dx = e.clientX - this.startPoint.x
-    const dy = e.clientY - this.startPoint.y
+  /* ---------------- 内部 ---------------- */
+
+  private trackMove(x: number, y: number) {
+    const dx = x - this.startPoint.x
+    const dy = y - this.startPoint.y
     if (Math.hypot(dx, dy) <= MOVE_TOLERANCE) return
-    this.cancelPending()
-    this.release()
-  }
-
-  private onRelease = () => {
-    this.cleanupWindowListeners()
-    this.release()
+    /* 手指在按钮上滑出去了：判定为滑动/滚动，波纹快速淡出（不硬删，避免闪断） */
+    this.release(true)
   }
 
   private cleanupWindowListeners() {
+    this.pointerId = null
     window.removeEventListener('pointermove', this.onPointermove)
-    window.removeEventListener('pointerup', this.onRelease)
-    window.removeEventListener('pointercancel', this.onRelease)
-  }
-
-  private cancelPending() {
-    if (this.startTimer !== null) {
-      window.clearTimeout(this.startTimer)
-      this.startTimer = null
-    }
-  }
-
-  private schedule(x?: number, y?: number) {
-    if (this.options.disabled || motionOff(this.host)) return
-    this.cancelPending()
-    this.startTimer = window.setTimeout(() => {
-      this.startTimer = null
-      this.spawn(x, y)
-    }, START_DELAY)
+    window.removeEventListener('pointerup', this.onPointerup)
+    window.removeEventListener('pointercancel', this.onPointercancel)
+    window.removeEventListener('touchmove', this.onTouchmove)
+    window.removeEventListener('touchend', this.onTouchend)
+    window.removeEventListener('touchcancel', this.onTouchcancel)
+    window.removeEventListener('mousemove', this.onMousemove)
+    window.removeEventListener('mouseup', this.onMouseup)
   }
 
   private spawn(x?: number, y?: number) {
+    if (this.options.disabled || motionOff(this.host)) return
     const host = this.host
     const { clientWidth: w, clientHeight: h } = host
     if (!w || !h) return
-    ensureClip(host)
 
     const rect = host.getBoundingClientRect()
     const radius = Math.hypot(w, h) / 2
@@ -156,28 +229,37 @@ class Ripple {
     if (this.options.color) el.style.backgroundColor = this.options.color
 
     host.appendChild(el)
-    // 强制一次布局，让初始的 transform 落地，否则会从终点直接闪现
+    // 强制一次布局让初始 transform/opacity 落地，下一帧再加 is-visible 才会真的"扩开"
     void el.offsetWidth
-    el.classList.add(VISIBLE)
+    requestAnimationFrame(() => {
+      if (el.isConnected && !el.classList.contains(FADING)) el.classList.add(VISIBLE)
+    })
 
     this.active.push({ el, born: performance.now() })
   }
 
-  private release() {
-    this.cancelPending()
+  /** quick = true：滑动/滚动取消，立即淡出；false：正常抬手，补足 MIN_HOLD */
+  private release(quick: boolean) {
     if (!this.active.length) return
     const ripples = this.active
     this.active = []
 
     ripples.forEach(({ el, born }) => {
-      const wait = Math.max(0, MIN_HOLD - (performance.now() - born))
-      window.setTimeout(() => this.fade(el), wait)
+      const wait = quick ? 0 : Math.max(0, MIN_HOLD - (performance.now() - born))
+      if (wait === 0) this.fade(el, quick)
+      else window.setTimeout(() => this.fade(el, quick), wait)
     })
   }
 
-  private fade(el: HTMLElement) {
+  private fade(el: HTMLElement, quick: boolean) {
     if (!el.isConnected) return
+    /* 从没来得及显示过（按下即滚动取消）：直接移除，避免闪一下 */
+    if (!el.classList.contains(VISIBLE)) {
+      el.remove()
+      return
+    }
     el.classList.add(FADING)
+    if (quick) el.style.transitionDuration = '0ms, 90ms'
     const done = () => {
       el.removeEventListener('transitionend', onEnd)
       window.clearTimeout(timer)
@@ -186,17 +268,20 @@ class Ripple {
     const onEnd = (event: TransitionEvent) => {
       if (event.propertyName === 'opacity') done()
     }
-    const timer = window.setTimeout(done, FADE_FALLBACK)
+    const timer = window.setTimeout(done, quick ? 120 : FADE_FALLBACK)
     el.addEventListener('transitionend', onEnd)
   }
 
   destroy() {
-    this.host.removeEventListener('pointerdown', this.onPointerdown)
+    if (this.hasPointer) this.host.removeEventListener('pointerdown', this.onPointerdown)
+    else {
+      this.host.removeEventListener('touchstart', this.onTouchstart)
+      this.host.removeEventListener('mousedown', this.onMousedown)
+    }
     this.host.removeEventListener('keydown', this.onKeydown)
     this.host.removeEventListener('keyup', this.onKeyup)
     this.host.removeEventListener('blur', this.onKeyup)
     this.cleanupWindowListeners()
-    this.cancelPending()
     this.active.forEach(({ el }) => el.remove())
     this.active = []
   }
