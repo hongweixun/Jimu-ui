@@ -709,7 +709,8 @@ button.jm-calendar__month {
   cursor: not-allowed;
 }
 
-/* 区间底色：起止各铺一半，接缝处才不会断开 */
+/* 区间底色：起止各铺一半，接缝处才不会断开。
+   实底主题色（用户反馈浅色带太淡），区间内数字反白 */
 .jm-calendar__day.is-in-range .jm-calendar__day-main::before,
 .jm-calendar__day.is-range-start .jm-calendar__day-main::before,
 .jm-calendar__day.is-range-end .jm-calendar__day-main::before {
@@ -717,7 +718,7 @@ button.jm-calendar__month {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: var(--jm-calendar-color-light, var(--jm-color-primary-light));
+  background: var(--jm-calendar-color, var(--jm-color-primary));
   z-index: 0;
 }
 
@@ -793,6 +794,24 @@ button.jm-calendar__month {
   color: var(--jm-color-primary-contrast);
 }
 
+/* 区间中间格：主题色实底上反白（起止格本身是白字圆形选中） */
+.jm-calendar__day.is-in-range:not(.is-selected) .jm-calendar__day-text {
+  color: var(--jm-color-primary-contrast);
+}
+
+/* 「今天」落在区间内：描边和主色字在实底上看不清，改为反白 */
+.jm-calendar__day.is-in-range.is-today:not(.is-selected) .jm-calendar__day-text {
+  box-shadow: inset 0 0 0 1px var(--jm-color-primary-contrast);
+  color: var(--jm-color-primary-contrast);
+}
+
+/* 跨月灰字落在区间实底上同样不可读：反白并降不透明度区分 */
+.jm-calendar__day.is-in-range.is-prev .jm-calendar__day-text,
+.jm-calendar__day.is-in-range.is-next .jm-calendar__day-text {
+  color: var(--jm-color-primary-contrast);
+  opacity: 0.55;
+}
+
 /* 日期描述：下方备注是独立小字行（常驻占位），与数字、选中色块互不重叠；
    上方备注少见，仍绝对定位贴格子顶缘 */
 .jm-calendar__day-info {
@@ -866,6 +885,20 @@ button.jm-calendar__month {
 
 .jm-calendar.is-square .jm-calendar__day.is-today.is-selected .jm-calendar__day-main {
   box-shadow: none;
+}
+
+/* 方块区间同样是主题色实底：反白 + 今天描边反白 */
+.jm-calendar.is-square .jm-calendar__day.is-in-range:not(.is-selected) .jm-calendar__day-text {
+  color: var(--jm-color-primary-contrast);
+}
+
+.jm-calendar.is-square .jm-calendar__day.is-in-range.is-today:not(.is-selected) .jm-calendar__day-main {
+  box-shadow: none;
+}
+
+.jm-calendar.is-square .jm-calendar__day.is-in-range.is-today:not(.is-selected) .jm-calendar__day-text {
+  box-shadow: inset 0 0 0 1px var(--jm-color-primary-contrast);
+  color: var(--jm-color-primary-contrast);
 }
 
 /* 只读 */
