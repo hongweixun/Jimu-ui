@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { toCssSize } from '../utils'
+import { vRipple } from '../utils/ripple'
 import JmIcon from './Icon.vue'
 import JmPopup from './Popup.vue'
 import Picker from './Picker.vue'
@@ -775,7 +776,16 @@ defineExpose({
                 @click="pick(day, $event)"
               >
                 <span class="jm-calendar__day-main">
-                  <span class="jm-calendar__day-text">{{ day.text }}</span>
+                  <span
+                    class="jm-calendar__day-text"
+                    v-ripple="{
+                      centered: true,
+                      color: day.selected
+                        ? 'var(--jm-color-primary-contrast)'
+                        : 'var(--jm-calendar-color, var(--jm-color-primary))',
+                    }"
+                    >{{ day.text }}</span
+                  >
                 </span>
                 <span v-if="day.topInfo" class="jm-calendar__day-info is-top">{{ day.topInfo }}</span>
                 <!-- 下方备注常驻占位：没有备注也撑住行高，所有格子的数字基线保持一致 -->
@@ -967,6 +977,9 @@ button.jm-calendar__month {
   font-family: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  /* 关键：grid item 的自动最小尺寸归零——否则备注小字（nowrap）的最小内容宽
+     会把所在列的 1fr 撑宽，导致「有备注的列里选中方块比没备注的宽」 */
+  min-width: 0;
 }
 
 /* 数字所在的一行：高度固定，区间带和方块都挂在这层 */
@@ -1036,26 +1049,12 @@ button.jm-calendar__month {
   border-radius: 50%;
   font-size: var(--jm-font-size-md);
   font-variant-numeric: tabular-nums;
+  /* 选中即波纹反馈（v-ripple 挂在本元素，圆形裁剪）：
+     未选中按主色波，选中后实底上按反白波；不再缩放文字/色块 */
+  --jm-ripple-opacity: 0.2;
   transition:
     background-color var(--jm-motion-feedback-duration) var(--jm-motion-feedback-ease),
-    color var(--jm-motion-feedback-duration) var(--jm-motion-feedback-ease),
-    transform var(--jm-motion-feedback-duration) var(--jm-motion-feedback-ease);
-}
-
-/* 按压反馈：数字轻微缩放，让「这次点到了」看得见 */
-.jm-calendar__day:not(.is-disabled):active .jm-calendar__day-text {
-  transform: scale(0.88);
-  opacity: 0.72;
-}
-
-[data-motion='off'] .jm-calendar__day:not(.is-disabled):active .jm-calendar__day-text {
-  transition: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .jm-calendar__day:not(.is-disabled):active .jm-calendar__day-text {
-    transition: none;
-  }
+    color var(--jm-motion-feedback-duration) var(--jm-motion-feedback-ease);
 }
 
 /* 圆形选中（默认） */
@@ -1093,6 +1092,7 @@ button.jm-calendar__month {
 .jm-calendar__day-info {
   flex: 0 0 auto;
   width: 100%;
+  min-width: 0;
   height: 12px;
   color: var(--jm-text-color-3);
   font-size: 10px;
