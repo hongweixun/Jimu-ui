@@ -85,7 +85,24 @@ def cal_state(i=0):
 st = cal_state(0)
 print("    [dbg]", st)
 check("calendar-scroll", "viewport renders months", st["months"] > 1, True)
-check("calendar-scroll", "viewport ~ one month tall", abs(st["viewportH"] - st["monthH"]) <= 24, True)
+# 跨月格去掉后月高随实际行数收缩（4~6 行），viewport 固定 6 行高：一个月高 ≤ viewport ≤ 月高+一行
+check(
+    "calendar-scroll",
+    "viewport ~ one month tall",
+    0 < st["monthH"] <= st["viewportH"] <= st["monthH"] + 64,
+    True,
+)
+
+# 各月高度应随行数不同而不同（首月 6 行的话，找一个 5 行/4 行的月份对比）
+heights = json.loads(
+    tab.js(
+        """(()=>{
+          const cal=document.querySelector('.jm-calendar');
+          return JSON.stringify([...cal.querySelectorAll('.jm-calendar__month')].map(m=>m.offsetHeight));
+        })()"""
+    )
+)
+check("calendar-scroll", "month heights vary with rows", len(set(heights)) > 1 or len(heights) <= 1, True)
 
 # 月份分隔标题：数量与月份节一致，第二条是下个月
 titles = json.loads(

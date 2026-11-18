@@ -199,19 +199,17 @@ const monthLabel = computed(() => {
 })
 
 function buildDays(y: number, m: number): CalendarDay[] {
-  const first = new Date(y, m, 1)
-  const offset = (first.getDay() - props.firstDayOfWeek + 7) % 7
-  const gridStart = addDays(first, -offset)
   const today = startOfDay(new Date())
 
-  return Array.from({ length: 42 }, (_, i) => {
-    const date = addDays(gridStart, i)
-    const type = date.getMonth() === m ? 'current' : date < first ? 'prev' : 'next'
+  /* 只渲染本月天数：起始的星期偏移由模板用空白占位，末尾不再补下个月的灰字——
+     月份段之间干干净净（对齐 TDesign/Vant），月高也随实际行数收缩 */
+  return Array.from({ length: new Date(y, m + 1, 0).getDate() }, (_, i) => {
+    const date = new Date(y, m, i + 1)
 
     const base: CalendarDay = {
       date,
       day: date.getDate(),
-      type,
+      type: 'current',
       text: String(date.getDate()),
     }
     if (sameDay(date, today)) {
@@ -242,9 +240,16 @@ function buildDays(y: number, m: number): CalendarDay[] {
   })
 }
 
-/* 每个月一份数据；固定渲染 42 格（6 行），所有月份高度一致 */
+/* 每个月一份数据（仅本月天数）+ 每月首行的星期偏移（模板用空白占位对齐星期列） */
 const allMonthDays = computed<CalendarDay[][]>(() =>
   months.value.map((m) => buildDays(m.getFullYear(), m.getMonth())),
+)
+
+const allMonthBlanks = computed<number[]>(() =>
+  months.value.map((m) => {
+    const first = new Date(m.getFullYear(), m.getMonth(), 1)
+    return (first.getDay() - props.firstDayOfWeek + 7) % 7
+  }),
 )
 
 /* ---------------- 交互 ---------------- */
@@ -349,7 +354,6 @@ watch(
        会出现首帧空白、要滑一下才画出来的问题——这里全部提前做掉。 */
     nextTick(() => {
       fitPoppableViewport()
-      measureMonthHeight()
       scrollToMonth(clampToRange(selected.value[0] ?? new Date()))
     })
   },
@@ -372,12 +376,14 @@ onBeforeUnmount(() => {
 
 /* ---------------- 月份纵向滚动（Vant / TDesign 式连续滚月） ---------------- */
 const scrollerRef = ref<HTMLElement | null>(null)
-/* 每月高度：标题行 26 + 6 行（42 格）+ 底部留白（--jm-space-2）。挂载后用实测值校正 */
-const monthHeight = ref(418)
+/* 跨月格去掉后每月行数不同（4~6 行），月高逐月计算：标题行 26 + rows × 行高 + 底部留白 8 */
+const MONTH_TITLE_H = 26
+const MONTH_BOTTOM_PAD = 8
+
 const visibleIndex = ref(0)
 
 /* 月份过多时只渲染可视区附近，其余用占位高度撑起；
-   每月固定 42 格 → 高度恒定，占位与实高的换算是精确的，滚动不会跳 */
+   占位高度按各月实际行数逐月累加，与真实渲染高度一致，滚动不会跳 */
 const RENDER_ALL_LIMIT = 30
 const WINDOW_PAD = 5
 const isWindowed = computed(() => months.value.length > RENDER_ALL_LIMIT)
@@ -389,39 +395,53 @@ const windowStartIndex = computed(() =>
 const renderedMonths = computed(() => {
   const all = months.value
   const allDays = allMonthDays.value
-  if (!isWindowed.value) return all.map((m, i) => ({ index: i, month: m, days: allDays[i] }))
+  const blanks = allMonthBlanks.value
+  if (!isWindowed.value) {
+    return all.map((m, i) => ({ index: i, month: m, days: allDays[i], blanks: blanks[i] }))
+  }
   const end = Math.min(all.length - 1, visibleIndex.value + WINDOW_PAD)
-  const list: { index: number; month: Date; days: CalendarDay[] }[] = []
+  const list: { index: number; month: Date; days: CalendarDay[]; blanks: number }[] = []
   for (let i = windowStartIndex.value; i <= end; i++) {
-    list.push({ index: i, month: all[i], days: allDays[i] })
+    list.push({ index: i, month: all[i], days: allDays[i], blanks: blanks[i] })
   }
   return list
 })
 
-const topPadHeight = computed(() => windowStartIndex.value * monthHeight.value)
-const bottomPadHeight = computed(() =>
-  Math.max(0, (months.value.length - 1 - (visibleIndex.value + WINDOW_PAD)) * monthHeight.value),
-)
+function monthRows(i: number): number {
+  const blanks = allMonthBlanks.value[i] ?? 0
+  const days = allMonthDays.value[i]?.length ?? 30
+  return Math.ceil((blanks + days) / 7)
+}
 
-function estimateMonthHeight(): number {
+function rowHeightPx(): number {
   const rh =
     typeof props.rowHeight === 'number' ? props.rowHeight : parseFloat(String(props.rowHeight)) || 64
-  return Math.round(rh * 6) + 8 + 26 // 6 行 + 底部留白 + 月份标题行
+  return Math.round(rh)
 }
 
-function measureMonthHeight() {
-  const el = scrollerRef.value?.querySelector<HTMLElement>('.jm-calendar__month')
-  monthHeight.value = el?.offsetHeight || estimateMonthHeight()
+function monthHeightAt(i: number): number {
+  return MONTH_TITLE_H + monthRows(i) * rowHeightPx() + MONTH_BOTTOM_PAD
 }
 
-onMounted(() => {
-  nextTick(() => {
-    measureMonthHeight()
-    /* 内联模式：挂载即定位到当前月（否则永远停在第一页，副标题和内容对不上） */
-    scrollToMonth(currentMonth.value)
-  })
+/* 各月高度的前缀和：第 i 个月的顶部位置 */
+const monthOffsets = computed<number[]>(() => {
+  const offs: number[] = []
+  let acc = 0
+  for (let i = 0; i < months.value.length; i++) {
+    offs.push(acc)
+    acc += monthHeightAt(i)
+  }
+  return offs
 })
-watch(() => props.rowHeight, () => nextTick(measureMonthHeight))
+
+const topPadHeight = computed(
+  () => monthOffsets.value[windowStartIndex.value] ?? 0,
+)
+const bottomPadHeight = computed(() => {
+  const end = Math.min(months.value.length, visibleIndex.value + WINDOW_PAD + 1)
+  const total = monthOffsets.value[monthOffsets.value.length - 1] ?? 0
+  return Math.max(0, total - (monthOffsets.value[end] ?? total))
+})
 
 /** 滚动到指定月份；smooth 仅用于箭头按钮（尊重减弱动态偏好） */
 function scrollToMonth(target: Date, smooth = false) {
@@ -436,7 +456,7 @@ function scrollToMonth(target: Date, smooth = false) {
 
   const el = scrollerRef.value
   if (!el) return
-  let top = idx * monthHeight.value
+  let top = monthOffsets.value[idx] ?? 0
   if (!isWindowed.value) {
     const sec = el.querySelector<HTMLElement>(`.jm-calendar__month[data-mi="${idx}"]`)
     if (sec) top = sec.offsetTop
@@ -466,9 +486,18 @@ function onScroll() {
   scrollRaf = requestAnimationFrame(() => {
     scrollRaf = 0
     const el = scrollerRef.value
-    if (!el || !monthHeight.value) return
-    const total = months.value.length
-    const idx = Math.min(total - 1, Math.max(0, Math.round(el.scrollTop / monthHeight.value)))
+    if (!el) return
+    const offs = monthOffsets.value
+    const total = offs.length
+    if (!total) return
+    /* 找「顶部位置 ≤ scrollTop 的最后一个月」；滚到底时兜底取最后一个月
+       （末月较短时 scrollTop 最大值可能够不到它的起点） */
+    let idx = 0
+    for (let i = 1; i < total; i++) {
+      if ((offs[i] ?? 0) <= el.scrollTop + 1) idx = i
+      else break
+    }
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 2) idx = total - 1
     visibleIndex.value = idx
     const m = months.value[idx]
     if (
@@ -696,13 +725,20 @@ defineExpose({
             :key="`${item.month.getFullYear()}-${item.month.getMonth()}`"
             class="jm-calendar__month"
             :data-mi="item.index"
-            :style="isWindowed ? { height: monthHeight + 'px' } : undefined"
+            :style="isWindowed ? { height: monthHeightAt(item.index) + 'px' } : undefined"
           >
             <!-- 月份分隔标题：每个滚动段落明确属于哪年哪月（TDesign 式） -->
             <div class="jm-calendar__month-title">
               {{ item.month.getFullYear() }}年{{ item.month.getMonth() + 1 }}月
             </div>
             <div class="jm-calendar__days">
+              <!-- 首行星期偏移占位（不渲染隔壁月的日期，段间干净） -->
+              <span
+                v-for="b in item.blanks"
+                :key="'b' + b"
+                class="jm-calendar__blank"
+                aria-hidden="true"
+              />
               <button
                 v-for="(day, di) in item.days"
                 :key="di"
@@ -856,7 +892,7 @@ button.jm-calendar__month {
   position: relative;
 }
 
-/* 月份分隔标题：固定 26px，与 estimateMonthHeight 保持一致（窗口化高度换算依赖它） */
+/* 月份分隔标题：固定 26px，与 monthHeightAt 计算保持一致（窗口化占位依赖它） */
 .jm-calendar__month-title {
   height: 26px;
   padding: 0 var(--jm-space-3);
@@ -930,10 +966,10 @@ button.jm-calendar__month {
 
 /* 跨月溢出格：整格隐藏（对齐 TDesign/Vant——月份段之间不显示隔壁月的灰字），
    visibility 保留网格占位，行高不塌 */
-.jm-calendar__day.is-prev,
-.jm-calendar__day.is-next {
-  visibility: hidden;
-  pointer-events: none;
+/* 首行星期偏移的空白占位：不渲染跨月日期，只占住网格位置 */
+.jm-calendar__blank {
+  display: block;
+  height: var(--jm-calendar-row-height);
 }
 
 .jm-calendar__day.is-disabled {
