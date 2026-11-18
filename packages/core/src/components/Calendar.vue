@@ -1087,20 +1087,22 @@ button.jm-calendar__month {
   color: var(--jm-color-primary-contrast);
 }
 
-/* 日期描述：下方备注是独立小字行（常驻占位），与数字、选中色块互不重叠；
-   上方备注少见，仍绝对定位贴格子顶缘 */
+/* 日期描述：下方备注是独立小字行（常驻占位 12px，数字基线不因有无备注而偏移）。
+   宽度归零 + 不裁剪：备注只参与垂直布局，水平方向不影响格子/选中框宽度
+   （各列 1fr 保持自然等宽），文字超过列宽时以列中心为基准向两侧自然溢出；
+   上方备注少见，绝对定位贴格子顶缘 */
 .jm-calendar__day-info {
   flex: 0 0 auto;
-  width: 100%;
+  display: flex;
+  justify-content: center;
+  width: 0;
   min-width: 0;
   height: 12px;
   color: var(--jm-text-color-3);
   font-size: 10px;
   line-height: 12px;
-  text-align: center;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
   pointer-events: none;
 }
 
