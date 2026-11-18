@@ -860,9 +860,9 @@ button.jm-calendar__month {
 .jm-calendar__month-title {
   height: 26px;
   padding: 0 var(--jm-space-3);
-  color: var(--jm-text-color-2);
-  font-size: var(--jm-font-size-xs);
-  font-weight: var(--jm-font-weight-medium);
+  color: var(--jm-text-color);
+  font-size: var(--jm-font-size-sm);
+  font-weight: 700;
   line-height: 26px;
   text-align: left;
   font-variant-numeric: tabular-nums;
@@ -928,9 +928,12 @@ button.jm-calendar__month {
   height: 34px;
 }
 
+/* 跨月溢出格：整格隐藏（对齐 TDesign/Vant——月份段之间不显示隔壁月的灰字），
+   visibility 保留网格占位，行高不塌 */
 .jm-calendar__day.is-prev,
 .jm-calendar__day.is-next {
-  color: var(--jm-text-color-4);
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .jm-calendar__day.is-disabled {
@@ -1032,13 +1035,6 @@ button.jm-calendar__month {
 .jm-calendar__day.is-in-range.is-today:not(.is-selected) .jm-calendar__day-text {
   box-shadow: inset 0 0 0 1px var(--jm-color-primary-contrast);
   color: var(--jm-color-primary-contrast);
-}
-
-/* 跨月灰字落在区间实底上同样不可读：反白并降不透明度区分 */
-.jm-calendar__day.is-in-range.is-prev .jm-calendar__day-text,
-.jm-calendar__day.is-in-range.is-next .jm-calendar__day-text {
-  color: var(--jm-color-primary-contrast);
-  opacity: 0.55;
 }
 
 /* 日期描述：下方备注是独立小字行（常驻占位），与数字、选中色块互不重叠；

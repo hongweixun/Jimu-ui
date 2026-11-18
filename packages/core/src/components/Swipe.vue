@@ -65,7 +65,8 @@ const emit = defineEmits<{
   click: [index: number]
 }>()
 
-const slots = useSlots()
+/* useSlots() 在默认泛型下会被 vue-tsc 推导成 {}，显式标注避免 slots.default 报错 */
+const slots = useSlots() as { default?: (...args: unknown[]) => VNode[] }
 
 /* ---------------- 子项收集 ----------------
    Swipe 不解析业务数据，只把默认插槽里的 vnode 平铺成 slides；

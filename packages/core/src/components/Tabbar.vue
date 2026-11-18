@@ -40,7 +40,8 @@ const styles = computed(() => {
   return s
 })
 
-const slots = useSlots()
+/* useSlots() 在默认泛型下会被 vue-tsc 推导成 {}，显式标注避免 slots.default 报错 */
+const slots = useSlots() as { default?: (...args: unknown[]) => VNode[] }
 
 /**
  * float-center 时把中间的 jm-tabbar-item 打上 float 标记。
