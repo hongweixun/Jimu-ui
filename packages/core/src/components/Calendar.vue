@@ -164,8 +164,9 @@ const days = computed<CalendarDay[]>(() => {
     }
     if (sameDay(date, today)) {
       base.today = true
-      // 对齐 TDesign：今天默认在日期下方标「今」，formatter 可覆盖
-      base.bottomInfo = '今'
+      // 对齐 TDesign：当天用「今天」二字替代数字（formatter 可覆盖 text / bottomInfo），
+      // 避免「今」字压在数字下面、选中实底时还得反色的别扭布局
+      base.text = '今天'
     }
 
     const patched = props.formatter ? props.formatter({ ...base }) : undefined
@@ -487,9 +488,8 @@ defineExpose({ currentMonth, selected, prevMonth, nextMonth, goToday, openMonthP
                 <span class="jm-calendar__day-text">{{ day.text }}</span>
               </span>
               <span v-if="day.topInfo" class="jm-calendar__day-info is-top">{{ day.topInfo }}</span>
-              <span v-if="day.bottomInfo" class="jm-calendar__day-info is-bottom">
-                {{ day.bottomInfo }}
-              </span>
+              <!-- 下方备注常驻占位：没有备注也撑住行高，所有格子的数字基线保持一致 -->
+              <span class="jm-calendar__day-info is-bottom">{{ day.bottomInfo }}</span>
             </button>
           </div>
         </div>
@@ -656,12 +656,12 @@ button.jm-calendar__month {
   grid-template-columns: repeat(7, 1fr);
   padding: 0 var(--jm-space-2);
   color: var(--jm-text-color-3);
-  font-size: var(--jm-font-size-xs);
+  font-size: var(--jm-font-size-sm);
   text-align: center;
 }
 
 .jm-calendar__weekday {
-  padding: 6px 0;
+  padding: 8px 0 6px;
 }
 
 /* 日期格子 */
@@ -671,11 +671,14 @@ button.jm-calendar__month {
   padding: 0 var(--jm-space-2) var(--jm-space-2);
 }
 
+/* 日期格子：纵向排布 —— 数字一行 + 备注一行（对齐 TDesign 方格） */
 .jm-calendar__day {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   height: var(--jm-calendar-row-height);
   padding: 0;
   border: 0;
@@ -686,15 +689,14 @@ button.jm-calendar__month {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 数字所在的一行：高度固定，区间带和方块都挂在这层，
-   上下描述绝对定位不参与布局 → 有备注时数字不会整体偏移 */
+/* 数字所在的一行：高度固定，区间带和方块都挂在这层 */
 .jm-calendar__day-main {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 36px;
+  height: 34px;
 }
 
 .jm-calendar__day.is-prev,
@@ -745,8 +747,8 @@ button.jm-calendar__month {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 36px;
-  height: 36px;
+  min-width: 34px;
+  height: 34px;
   border-radius: 50%;
   font-size: var(--jm-font-size-md);
   font-variant-numeric: tabular-nums;
@@ -782,6 +784,8 @@ button.jm-calendar__month {
 .jm-calendar__day.is-today .jm-calendar__day-text {
   box-shadow: inset 0 0 0 1px var(--jm-calendar-color, var(--jm-color-primary));
   color: var(--jm-calendar-color, var(--jm-color-primary));
+  /* 「今天」两个字比数字略小，圆里放得下也不显挤 */
+  font-size: var(--jm-font-size-sm);
 }
 
 .jm-calendar__day.is-today.is-selected .jm-calendar__day-text {
@@ -789,16 +793,15 @@ button.jm-calendar__month {
   color: var(--jm-color-primary-contrast);
 }
 
-/* 日期上下的描述：绝对定位在格子边缘，不参与布局（对齐 TDesign） */
+/* 日期描述：下方备注是独立小字行（常驻占位），与数字、选中色块互不重叠；
+   上方备注少见，仍绝对定位贴格子顶缘 */
 .jm-calendar__day-info {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 1;
-  padding: 0 2px;
+  flex: 0 0 auto;
+  width: 100%;
+  height: 12px;
   color: var(--jm-text-color-3);
   font-size: 10px;
-  line-height: 1.2;
+  line-height: 12px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -807,22 +810,15 @@ button.jm-calendar__month {
 }
 
 .jm-calendar__day-info.is-top {
-  top: 3px;
-}
-
-.jm-calendar__day-info.is-bottom {
-  bottom: 3px;
+  position: absolute;
+  top: 2px;
+  left: 0;
+  right: 0;
+  height: auto;
 }
 
 .jm-calendar__day.is-selected .jm-calendar__day-info {
   color: var(--jm-calendar-color, var(--jm-color-primary));
-}
-
-/* 选中格压在实心底上的「今」字要反色，否则主色字贴主色底看不清 */
-.jm-calendar__day.is-selected.is-today .jm-calendar__day-info,
-.jm-calendar__day.is-range-start.is-today .jm-calendar__day-info,
-.jm-calendar__day.is-range-end.is-today .jm-calendar__day-info {
-  color: var(--jm-color-primary-contrast);
 }
 
 /* ---------- 方形（TDesign 风格）：整格色块，起止只圆外侧 ---------- */
@@ -857,10 +853,6 @@ button.jm-calendar__month {
 .jm-calendar.is-square .jm-calendar__day.is-selected .jm-calendar__day-text {
   background: transparent;
   color: var(--jm-color-primary-contrast);
-}
-
-.jm-calendar.is-square .jm-calendar__day.is-selected .jm-calendar__day-info {
-  color: rgba(255, 255, 255, 0.82);
 }
 
 .jm-calendar.is-square .jm-calendar__day.is-today .jm-calendar__day-main {

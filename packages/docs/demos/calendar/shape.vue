@@ -5,7 +5,7 @@ import type { CalendarDay } from 'jimu-ui'
 const single = ref<Date>(new Date(2026, 10, 20))
 const range = ref<Date[]>([new Date(2026, 10, 14), new Date(2026, 10, 18)])
 
-/* 给部分日期加下方备注：数字与区间带必须保持对齐 */
+/* 给部分日期加下方备注：独立小字行，数字与区间带保持对齐 */
 function formatter(day: CalendarDay) {
   if (day.type !== 'current') return undefined
   if (day.day === 18) return { bottomInfo: '已满' }
@@ -36,6 +36,6 @@ function formatter(day: CalendarDay) {
       :formatter="formatter"
       :show-confirm="false"
     />
-    <p class="demo-note">备注文字绝对定位在格子上下缘，不会把数字挤偏</p>
+    <p class="demo-note">备注是数字下方的独立小字行，数字基线不会因备注或色带而偏移</p>
   </div>
 </template>

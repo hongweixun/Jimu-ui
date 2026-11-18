@@ -329,6 +329,7 @@ time.sleep(1.0)
 ok = wait_for("!!document.querySelector('.jm-snackbar__action')", 5)
 check("snackbar", "bottom snackbar exists", ok, True)
 # 出现且进场动画一结束立即测量（bar 3 秒自动消失，不能拖太久）
+# 消息条挂载在手机模拟器屏幕内：以屏幕底边为基准测距离
 s3 = 'none'
 end = time.time() + 3
 while time.time() < end:
@@ -337,15 +338,17 @@ while time.time() < end:
       const el=act?act.closest('.jm-snackbar'):null;
       if(!el)return 'none';
       if(el.className.includes('enter-active')||el.className.includes('leave-active'))return 'anim';
-      const r=el.getBoundingClientRect();
-      return JSON.stringify({vh:innerHeight, bottom:Math.round(innerHeight-r.bottom), action:act.textContent});
+      const screen=document.querySelector('.phone__screen');
+      const r=el.getBoundingClientRect(), sr=screen.getBoundingClientRect();
+      return JSON.stringify({bottom:Math.round(sr.bottom-r.bottom), inside: r.left>=sr.left-1 && r.right<=sr.right+1 && r.bottom<=sr.bottom+1, action:act.textContent});
     })()""")
     if isinstance(s3, str) and s3.startswith("{"):
         break
     time.sleep(0.15)
 if isinstance(s3, str) and s3.startswith("{"):
     s3 = json.loads(s3)
-    check("snackbar", "bottom position near viewport bottom", 0 <= s3["bottom"] <= 24, True)
+    check("snackbar", "bottom position near screen bottom", 0 <= s3["bottom"] <= 24, True)
+    check("snackbar", "bar inside phone screen", s3["inside"], True)
     check("snackbar", "action button", s3["action"], "去结算")
 else:
     check("snackbar", "bottom position measurable", s3, "json")
@@ -421,8 +424,6 @@ check("qrcode", "toDataURL returns png", isinstance(url, str) and url.startswith
 # ================= Guide =================
 print("== guide ==")
 goto("/components/guide")
-print("== guide ==")
-goto("/components/guide")
 # Guide 未开启时不渲染任何元素，按页面文本定位 demo
 wait_for("[...document.querySelectorAll('.demo-page')].some(p=>p.textContent.includes('开始引导'))")
 time.sleep(0.8)
@@ -433,20 +434,28 @@ ok = wait_for("!!document.querySelector('.jm-guide__bubble')", 5)
 time.sleep(0.6)
 g1 = json.loads(tab.js("""(()=>{
   const bubble=document.querySelector('.jm-guide__bubble');
+  const mask=document.querySelector('.jm-guide__mask');
   const hl=document.querySelector('.jm-guide__highlight');
   const cnt=document.querySelector('.jm-guide__count');
   const tgt=document.getElementById('guide-step-1').getBoundingClientRect();
   const hr=hl?hl.getBoundingClientRect():null;
+  const sr=document.querySelector('.phone__screen').getBoundingClientRect();
+  const mr=mask.getBoundingClientRect();
+  const br=bubble.getBoundingClientRect();
   return JSON.stringify({
     cnt: cnt?cnt.textContent.trim():'',
     overlap: hr && hr.left < tgt.right && hr.right > tgt.left && hr.top < tgt.bottom && hr.bottom > tgt.top,
     title: bubble.querySelector('.jm-guide__title').textContent,
+    maskOnScreenOnly: Math.abs(mr.left-sr.left)<3 && Math.abs(mr.right-sr.right)<3 && Math.abs(mr.top-sr.top)<3 && Math.abs(mr.bottom-sr.bottom)<3,
+    bubbleInside: br.left>=sr.left-1 && br.right<=sr.right+1 && br.top>=sr.top-1,
   });
 })()"""))
 check("guide", "bubble shown", ok, True)
 check("guide", "count 1/3", g1["cnt"], "1/3")
 check("guide", "highlight covers step target", g1["overlap"], True)
 check("guide", "first step title", g1["title"], "搜索课程")
+check("guide", "mask covers phone screen only", g1["maskOnScreenOnly"], True)
+check("guide", "bubble inside phone screen", g1["bubbleInside"], True)
 
 js_click("document.querySelector('.jm-guide__btn.is-primary')")
 time.sleep(0.6)
@@ -466,11 +475,17 @@ gd = json.loads(tab.js("""(()=>{
   const shade=document.querySelectorAll('.jm-guide__shade').length;
   const cnt=document.querySelector('.jm-guide__count')?.textContent.trim()||'';
   const bubble=document.querySelector('.jm-guide__bubble');
-  return JSON.stringify({shades:shade, cnt, bubble:!!bubble});
+  const br=bubble.getBoundingClientRect();
+  const sr=document.querySelector('.phone__screen').getBoundingClientRect();
+  return JSON.stringify({shades:shade, cnt, bubble:!!bubble,
+    centered: Math.abs((br.left+br.right)/2-(sr.left+sr.right)/2)<10 && Math.abs((br.top+br.bottom)/2-(sr.top+sr.bottom)/2)<10,
+    inside: br.left>=sr.left-1 && br.right<=sr.right+1 && br.top>=sr.top-1 && br.bottom<=sr.bottom+1});
 })()"""))
 check("guide", "dialog bubble shown", gd["bubble"], True)
 check("guide", "dialog mode full shade (no hole)", gd["shades"], 1)
 check("guide", "dialog count 1/2", gd["cnt"], "1/2")
+check("guide", "dialog centered in phone screen", gd["centered"], True)
+check("guide", "dialog inside phone screen", gd["inside"], True)
 
 # ================= Calendar 今日角标 =================
 print("== calendar today ==")
@@ -487,10 +502,12 @@ cal = json.loads(tab.js("""(()=>{
   const day=document.querySelector('.jm-calendar__day.is-today');
   if(!day) return JSON.stringify({found:false});
   const info=day.querySelector('.jm-calendar__day-info.is-bottom');
-  return JSON.stringify({found:true, badge:info?info.textContent.trim():'', selected:day.classList.contains('is-selected')});
+  return JSON.stringify({found:true, text:day.querySelector('.jm-calendar__day-text').textContent.trim(), badge:info?info.textContent.trim():'', selected:day.classList.contains('is-selected')});
 })()"""))
 check("calendar", "today cell found", cal.get("found"), True)
-check("calendar", "today badge 今", cal.get("badge"), "今")
+# 0.25.3 起「今」字小字改为「今天」二字替代数字（对齐 TDesign）
+check("calendar", "today shows 今天 instead of number", cal.get("text"), "今天")
+check("calendar", "today has no 今 below", cal.get("badge"), "")
 
 # ================= 汇总 =================
 print(f"\n==== {passed} passed, {len(failed)} failed ====")
