@@ -157,13 +157,29 @@ function clampToRange(d: Date): Date {
 
 const currentMonth = ref<Date>(clampToRange(selected.value[0] ?? new Date()))
 
-/* 选中值变化时若跨月，滚动到那一页 */
+/* 选中值变化时：目标月完全不在可视区内才滚动定位（外部程序改值 / 弹层打开）。
+   不能拿 currentMonth 判断——currentMonth 只是副标题的月份，连续滚月布局下
+   可视区经常同时露出两个月份段（本月占主体、次月已露出标题和头几行），
+   用户点进露出的那段时若强制滚月，页面会突然跳到目标月顶端、把第一行裁掉 */
 watch(
   () => selected.value[0],
   (d) => {
-    if (d && (d.getMonth() !== currentMonth.value.getMonth() || d.getFullYear() !== currentMonth.value.getFullYear())) {
-      scrollToMonth(d)
-    }
+    if (!d) return
+    const idx = months.value.findIndex(
+      (m) => m.getFullYear() === d.getFullYear() && m.getMonth() === d.getMonth(),
+    )
+    if (idx < 0) return
+    const el = scrollerRef.value
+    if (!el) return
+    const sec = el.querySelector<HTMLElement>(`.jm-calendar__month[data-mi="${idx}"]`)
+    /* 窗口化时上方占位把月份整体下推，实际位置 = 前缀和 − 窗口起点前缀和；
+       未窗口化直接用 DOM offsetTop（权威）。两种都算，取得到 DOM 就用 DOM */
+    let top =
+      (monthOffsets.value[idx] ?? 0) - (monthOffsets.value[windowStartIndex.value] ?? 0)
+    if (sec && sec.offsetHeight > 0) top = sec.offsetTop
+    const height = sec && sec.offsetHeight > 0 ? sec.offsetHeight : monthHeightAt(idx)
+    const visible = top < el.scrollTop + el.clientHeight && top + height > el.scrollTop
+    if (!visible) scrollToMonth(d)
   },
 )
 

@@ -87,6 +87,9 @@ let ro: ResizeObserver | null = null
 onMounted(() => {
   const c = container()
   c.addEventListener('scroll', onScroll, { passive: true })
+  /* 用户手动滚动时打断进行中的补间动画 */
+  c.addEventListener('touchstart', cancelScrollAnim, { passive: true })
+  c.addEventListener('wheel', cancelScrollAnim, { passive: true })
   window.addEventListener('resize', onScroll)
   if (typeof ResizeObserver !== 'undefined') {
     ro = new ResizeObserver(() => measure())
@@ -99,24 +102,76 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  cancelScrollAnim()
   const c = container()
   c.removeEventListener('scroll', onScroll)
+  c.removeEventListener('touchstart', cancelScrollAnim)
+  c.removeEventListener('wheel', cancelScrollAnim)
   window.removeEventListener('resize', onScroll)
   ro?.disconnect()
 })
 
-/* ---------------- 点击 / 滑动定位 ---------------- */
+/* ---------------- 点击 / 滑动定位 ----------------
+   轻点：松手后平滑滚动到目标组；拖动滑选：划到哪个索引就瞬时定位到哪
+   （拖动时连续触发动画会互相打断，页面跟不上手）。
+   动画用 rAF 补间而不是 scrollTo({behavior:'smooth'})——iOS WebKit 对
+   程序化平滑滚动的支持不一致，且无头/WebView 环境常被瞬时完成；
+   自绘补间时长可控、各端一致。 */
+let pressIndex: string | null = null
+let scrollRaf = 0
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  )
+}
+
+function cancelScrollAnim() {
+  if (scrollRaf) {
+    cancelAnimationFrame(scrollRaf)
+    scrollRaf = 0
+  }
+}
+
+function setScrollTop(c: HTMLElement | Window, top: number) {
+  if (c === window) window.scrollTo(0, top)
+  else (c as HTMLElement).scrollTop = top
+}
+
+/** easeInOutCubic 补间滚动，约 300ms；用户中途滚动（触摸/滚轮）即打断 */
+function animateScrollTop(c: HTMLElement | Window, target: number, duration = 300) {
+  cancelScrollAnim()
+  const getTop = () => (c === window ? window.scrollY : (c as HTMLElement).scrollTop)
+  const from = getTop()
+  const dist = target - from
+  if (!dist) return
+  if (prefersReducedMotion() || typeof requestAnimationFrame === 'undefined') {
+    setScrollTop(c, target)
+    return
+  }
+  const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+  const t0 = performance.now()
+  const step = (now: number) => {
+    const p = Math.min((now - t0) / duration, 1)
+    setScrollTop(c, from + dist * ease(p))
+    scrollRaf = p < 1 ? requestAnimationFrame(step) : 0
+  }
+  scrollRaf = requestAnimationFrame(step)
+}
+
 function scrollToIndex(index: string, smooth = true) {
   const entry = entries.value.find((e) => e.index === index)
   const el = entry?.getEl()
   if (!el) return
   const c = container()
-  const behavior: ScrollBehavior = smooth ? 'smooth' : 'auto'
-  const delta = el.getBoundingClientRect().top - containerTop()
-  if (c === window) {
-    window.scrollTo({ top: window.scrollY + delta, behavior })
-  } else {
-    ;(c as HTMLElement).scrollTo({ top: (c as HTMLElement).scrollTop + delta, behavior })
+  const target =
+    (c === window ? window.scrollY : (c as HTMLElement).scrollTop) +
+    (el.getBoundingClientRect().top - containerTop())
+  if (smooth) animateScrollTop(c, target)
+  else {
+    cancelScrollAnim()
+    setScrollTop(c, target)
   }
   if (active.value !== index) {
     active.value = index
@@ -148,8 +203,9 @@ function indexAt(clientY: number): string | null {
 function onPointerDown(e: PointerEvent) {
   const text = indexAt(e.clientY)
   if (!text) return
+  /* 按下只记目标、先不滚：轻点要等松手后再平滑滚动，避免和拖动路径打架 */
+  pressIndex = text
   tip.value = { text, top: tipTop(e.clientY) }
-  scrollToIndex(text, false)
   try {
     ;(e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId)
   } catch {
@@ -162,6 +218,8 @@ function onPointerMove(e: PointerEvent) {
   const text = indexAt(e.clientY)
   if (!text) return
   if (text !== tip.value.text) {
+    /* 拖动：换索引即瞬时定位 */
+    pressIndex = null
     tip.value = { text, top: tipTop(e.clientY) }
     scrollToIndex(text, false)
   } else {
@@ -170,6 +228,9 @@ function onPointerMove(e: PointerEvent) {
 }
 
 function onPointerUp() {
+  /* 轻点（全程没划到别的索引）：平滑滚动，动效自然 */
+  if (pressIndex) scrollToIndex(pressIndex, true)
+  pressIndex = null
   tip.value = null
 }
 
